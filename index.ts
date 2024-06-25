@@ -6,7 +6,7 @@ export * from './node'
 
 // https://github.com/vuepress/vuepress-plugin-git-log/blob/master/lib/index.js
 
-export const addonLive2d = defineValaxyAddon(options => ({
+export const addonGitlog = defineValaxyAddon(options => ({
   name: pkg.name,
   enable: true,
   options,

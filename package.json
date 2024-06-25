@@ -6,7 +6,8 @@
   "keywords": [
     "valaxy",
     "addon",
-    "template"
+    "valaxy-addon",
+    "gitlog"
   ],
   "main": "index.ts"
 }
