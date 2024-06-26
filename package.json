@@ -1,13 +1,20 @@
 {
-  "name": "gitlog",
+  "name": "valaxy-addon-git-log",
   "version": "0.0.1",
-  "description": "Template for Valaxy Addon.",
-  "repository": "https://github.com/YunYouJun/valaxy",
+  "description": "Integrates git logs into your page of Valaxy site.",
+  "repository": "https://github.com/WRXinYue/valaxy-addon-git-log",
   "keywords": [
     "valaxy",
     "addon",
     "valaxy-addon",
-    "gitlog"
+    "git-log"
   ],
-  "main": "index.ts"
+  "main": "index.ts",
+  "types": "index.d.ts",
+  "peerDependencies": {
+    "valaxy": "latest"
+  },
+  "dependencies": {
+    "gravatar": "^1.8.2"
+  }
 }

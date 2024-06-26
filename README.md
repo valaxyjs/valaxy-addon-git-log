@@ -1,20 +1,62 @@
-# valaxy-addon-template
+# valaxy-addon-git-log
 
-## Usage
+## Installation
+
+To install the `valaxy-addon-git-log`, run the following command:
 
 ```bash
-npm i valaxy-addon-template
+pnpm add valaxy-addon-git-log
 ```
 
-### 加载插件
+## Configuration
+
+In your configuration file, import and define the addon:
 
 ```ts
 import { defineValaxyConfig } from 'valaxy'
-import { addonTemplate } from 'valaxy-addon-template'
+import { addonGitLog } from 'valaxy-addon-git-log'
 
 export default defineValaxyConfig({
   addons: [
-    addonTemplate(),
+    addonGitLog(),
   ],
 })
+```
+
+## Basic Usage
+
+To add Git contributors to a page, use the `GitLogContributor` component:
+
+```vue
+<template>
+  <GitLogContributor />
+</template>
+```
+
+## Customization
+
+When you add this plugin, it automatically includes `gitLogContributors` information in the `Frontmatter`. Here’s an example:
+
+```vue
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useFrontmatter } from 'valaxy'
+
+const frontmatter = useFrontmatter()
+
+const gitLogContributors = computed(() => frontmatter.value.gitLogContributors)
+</script>
+
+<template>
+  <div class="flex flex-wrap gap-4 pt-2">
+    <div :title="contributor.email" class="flex gap-2 items-center" v-for="(contributor, index) in gitLogContributors" :key="index">
+      <img :src="contributor.avatar" class="w-8 h-8 rounded-full"/>
+      {{ contributor.name }}
+    </div>
+  </div>
+</template>
+
+<style lang="scss">
+// custom twikoo style
+</style>
 ```
