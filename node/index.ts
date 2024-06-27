@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { execSync } from 'node:child_process'
 import { defineValaxyAddon } from 'valaxy'
 import consola from 'consola'
 import { blue, dim, underline, yellow } from 'picocolors'
@@ -12,6 +13,15 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
   options,
 
   setup(valaxy) {
+    valaxy.hook('build:before', () => {
+      try {
+        consola.info(`${yellow('valaxy-addon-git-log')}: ${execSync('git --version')}`)
+      }
+      catch (error) {
+        consola.error(`${yellow('valaxy-addon-git-log')} encountered an error: ${error}`)
+      }
+    })
+
     valaxy.hook('vue-router:extendRoute', async (route) => {
       const filePath = route.components.get('default') as string
       if (filePath) {
