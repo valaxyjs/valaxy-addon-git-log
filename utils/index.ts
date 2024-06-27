@@ -1,7 +1,6 @@
 import { execSync } from 'node:child_process'
+import gravatar from 'gravatar'
 import type { Contributor } from '../types'
-
-const gravatar = require('gravatar')
 
 export function getContributors(filePath: string) {
   const log = execSync(`git log --pretty=format:"%an|%ae" ${filePath}`, { encoding: 'utf-8' })

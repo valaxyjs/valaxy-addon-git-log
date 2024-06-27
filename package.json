@@ -16,5 +16,8 @@
   },
   "dependencies": {
     "gravatar": "^1.8.2"
+  },
+  "devDependencies": {
+    "@types/gravatar": "^1.8.6"
   }
 }
