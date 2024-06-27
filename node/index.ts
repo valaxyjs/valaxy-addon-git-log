@@ -37,10 +37,9 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
             route.meta.frontmatter.gitLogContributors.push(contributor)
           })
 
-          if (options?.debug)
-            consola.info(debugInfo)
-          else
-            consola.debug(debugInfo)
+          // Output debug information based on configuration or environment variables
+          if (options?.debug !== false)
+            (options?.debug ? consola.info : consola.debug)(debugInfo)
         }
         catch (error) {
           consola.error(error)
