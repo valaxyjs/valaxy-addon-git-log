@@ -3,8 +3,11 @@ import gravatar from 'gravatar'
 import { blue, dim, red, underline, yellow } from 'picocolors'
 import type { Contributor } from '../types'
 
+// https://github.com/vuepress/vuepress-plugin-git-log/blob/master/lib/index.js
+
+// git log --pretty=format:"%an" 文件路径 | sort | uniq -c | sort -k1,1nr
 export function getContributors(filePath: string) {
-  const log = execSync(`git log --pretty=format:'{"name": "%an", "email": "%ae"}' ${filePath}`, { encoding: 'utf-8' })
+  const log = execSync(`git log --follow --no-merges --pretty=format:'{"name": "%an", "email": "%ae"}' ${filePath}`, { encoding: 'utf-8' })
   const contributors = log.split('\n').map((line) => {
     if (!line.trim())
       throw new Error(`${yellow('valaxy-addon-git-log')} - Encountered an empty line while parsing log for file: "${underline(filePath)}"`)
