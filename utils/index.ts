@@ -1,13 +1,26 @@
 import { execSync } from 'node:child_process'
 import gravatar from 'gravatar'
+import { blue, dim, red, underline, yellow } from 'picocolors'
 import type { Contributor } from '../types'
 
 export function getContributors(filePath: string) {
-  const log = execSync(`git log --pretty=format:"%an|%ae" ${filePath}`, { encoding: 'utf-8' })
+  const log = execSync(`git log --pretty=format:'{"name": "%an", "email": "%ae"}' ${filePath}`, { encoding: 'utf-8' })
   const contributors = log.split('\n').map((line) => {
-    const [name, email] = line.split('|')
-    const avatar = gravatar.url(email)
-    return { name, email, avatar }
+    if (!line.trim())
+      throw new Error(`${yellow('valaxy-addon-git-log')} - Encountered an empty line while parsing log for file: "${underline(filePath)}"`)
+
+    try {
+      const { name, email } = JSON.parse(line)
+      const avatar = gravatar.url(email)
+      return { name, email, avatar }
+    }
+    catch (error) {
+      throw new Error(
+        `${yellow('valaxy-addon-git-log')} - Failed to parse line: "${blue(line)}"\n`
+        + ` ${dim('├─')} Error: ${red(error as any)}\n`
+        + ` ${dim('└─')} File: "${underline(filePath)}"`,
+      )
+    }
   })
   return contributors
 }
