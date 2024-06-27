@@ -4,3 +4,7 @@ export interface Contributor {
   avatar: string
   count: number
 }
+
+export interface GitLogOptions {
+  debug: boolean
+}
