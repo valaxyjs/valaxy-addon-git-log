@@ -38,7 +38,8 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
           const contributors = getContributors(filePath)
           debugInfo += ` ${dim('├─')} ${blue('Contributors')}: ${JSON.stringify(contributors)}\n`
           const sortedContributors = countAndSortContributors(contributors)
-          debugInfo += ` ${dim('└─')} ${blue('SortedContributors')}: ${JSON.stringify(sortedContributors)}`
+          debugInfo += ` ${dim('└─')} ${blue('SortedContributors')}: ${JSON.stringify(sortedContributors)}\n`
+          debugInfo += `${execSync(`git log -- ${filePath}`, { encoding: 'utf-8' })}`
 
           if (!route.meta.frontmatter.gitLogs)
             route.meta.frontmatter.gitLogContributors = []
