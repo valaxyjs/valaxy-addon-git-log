@@ -17,7 +17,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
     let tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
     if (process.platform === 'linux') {
       try {
-        execSync(`[ -e ${tty} ]`)
+        execSync(`test -e ${tty}`)
       }
       catch (error) {
         consola.warn(`${yellow('valaxy-addon-git-log')}: The path ${tty} does not exist`)
