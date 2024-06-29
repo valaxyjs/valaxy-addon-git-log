@@ -14,7 +14,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
 
   setup(valaxy) {
     consola.info(`${yellow('valaxy-addon-git-log')}: ${blue('Platform')}: ${process.platform}`)
-    let tty = process.platform === 'win32' ? 'CON' : '/dev/3tty'
+    let tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
 
     valaxy.hook('build:before', () => {
       try {
@@ -38,7 +38,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         debugInfo += ` ${dim('├─')} ${blue('FilePath')}: ${underline(filePath)}\n`
 
         try {
-          const contributors = getContributors(filePath, tty)
+          const contributors = getContributors(filePath)
           debugInfo += ` ${dim('└─')} ${blue('Contributors')}: ${JSON.stringify(contributors)}\n`
           debugInfo += `${execSync(`git log --follow --no-merges -- ${filePath}`, { encoding: 'utf-8' })}`
 
