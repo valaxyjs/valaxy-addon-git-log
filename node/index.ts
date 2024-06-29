@@ -14,16 +14,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
 
   setup(valaxy) {
     consola.info(`${yellow('valaxy-addon-git-log')}: ${blue('Platform')}: ${process.platform}`)
-    let tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
-    if (process.platform === 'linux') {
-      try {
-        execSync(`test -e ${tty}`)
-      }
-      catch (error) {
-        consola.warn(`${yellow('valaxy-addon-git-log')}: The path ${tty} does not exist`)
-        tty = ''
-      }
-    }
+    let tty = process.platform === 'win32' ? 'CON' : '/dev/3tty'
 
     valaxy.hook('build:before', () => {
       try {
@@ -62,8 +53,11 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
           if (options?.debug !== false)
             (options?.debug ? consola.info : consola.debug)(debugInfo)
         }
-        catch (error) {
-          consola.error(error)
+        catch (error: any) {
+          if (process.platform === 'linux' && error.message.includes(tty)) {
+            consola.warn(`${yellow('valaxy-addon-git-log')}: The path ${tty} does not exist`)
+            tty = ''
+          }
         }
       }
     })
