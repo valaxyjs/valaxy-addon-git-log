@@ -7,4 +7,6 @@ export interface Contributor {
 
 export interface GitLogOptions {
   debug: boolean
+  // contributor: {
+  // }
 }

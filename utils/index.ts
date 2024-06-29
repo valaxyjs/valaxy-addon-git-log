@@ -4,10 +4,9 @@ import { blue, dim, red, underline, yellow } from 'picocolors'
 import consola from 'consola'
 import type { Contributor } from '../types'
 
-export function getContributors(filePath: string) {
-  // eslint-disable-next-line node/prefer-global/process
-  const tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
-  const shortLog = execSync(`git shortlog < ${tty} -s -n -e -c "${filePath}"`, { encoding: 'utf-8' })
+export function getContributors(filePath: string, tty: string | null) {
+  const command = tty ? `git shortlog < ${tty} -s -n -e -c "${filePath}"` : `git shortlog -s -n -e -c "${filePath}"`
+  const shortLog = execSync(command, { encoding: 'utf-8' })
   // const log = execSync(`git log --follow --no-merges --pretty=format:'{"name": "%an", "email": "%ae"}' ${filePath}`, { encoding: 'utf-8' })
   // const log = execSync(`git log --pretty=format:"%an" ${filePath} | sort | uniq -c | sort -k1,1nr`, { encoding: 'utf-8' })
   consola.info('shortLog', shortLog)

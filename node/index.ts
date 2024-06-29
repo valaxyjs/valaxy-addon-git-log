@@ -3,6 +3,7 @@ import { execSync } from 'node:child_process'
 import { defineValaxyAddon } from 'valaxy'
 import consola from 'consola'
 import { blue, dim, underline, yellow } from 'picocolors'
+import fs from 'fs-extra'
 import pkg from '../package.json'
 import { getContributors } from '../utils'
 import type { GitLogOptions } from '../types'
@@ -13,6 +14,13 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
   options,
 
   setup(valaxy) {
+    consola.info(`${yellow('valaxy-addon-git-log')}: ${blue('Platform')}: ${process.platform}`)
+    let tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
+    if (!fs.existsSync(tty)) {
+      consola.warn(`${yellow('valaxy-addon-git-log')}: The path ${tty} does not exist`)
+      tty = ''
+    }
+
     valaxy.hook('build:before', () => {
       try {
         consola.info(`${yellow('valaxy-addon-git-log')}: ${execSync('git --version')}`)
@@ -35,7 +43,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         debugInfo += ` ${dim('├─')} ${blue('FilePath')}: ${underline(filePath)}\n`
 
         try {
-          const contributors = getContributors(filePath)
+          const contributors = getContributors(filePath, tty)
           debugInfo += ` ${dim('└─')} ${blue('Contributors')}: ${JSON.stringify(contributors)}\n`
           debugInfo += `${execSync(`git log --follow --no-merges -- ${filePath}`, { encoding: 'utf-8' })}`
 
