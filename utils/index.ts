@@ -6,7 +6,8 @@ import type { Contributor } from '../types'
 
 export function getContributors(filePath: string) {
   const command = `git shortlog -nesc "${filePath}"`
-  const shortLog = execSync(command, { stdio: ['inherit', 'pipe', 'pipe'], encoding: 'utf-8' })
+  // https://git-scm.com/docs/git-shortlog#_description
+  const shortLog = execSync(command, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf-8' })
   // const log = execSync(`git log --follow --no-merges --pretty=format:'{"name": "%an", "email": "%ae"}' ${filePath}`, { encoding: 'utf-8' })
   // const log = execSync(`git log --pretty=format:"%an" ${filePath} | sort | uniq -c | sort -k1,1nr`, { encoding: 'utf-8' })
   consola.info('shortLog', shortLog)
