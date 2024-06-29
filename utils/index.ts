@@ -1,30 +1,45 @@
 import { execSync } from 'node:child_process'
 import gravatar from 'gravatar'
 import { blue, dim, red, underline, yellow } from 'picocolors'
+import consola from 'consola'
 import type { Contributor } from '../types'
 
-// https://github.com/vuepress/vuepress-plugin-git-log/blob/master/lib/index.js
-
-// git log --pretty=format:"%an" 文件路径 | sort | uniq -c | sort -k1,1nr
 export function getContributors(filePath: string) {
-  const log = execSync(`git log --follow --no-merges --pretty=format:'{"name": "%an", "email": "%ae"}' ${filePath}`, { encoding: 'utf-8' })
-  const contributors = log.split('\n').map((line) => {
-    if (!line.trim())
-      throw new Error(`${yellow('valaxy-addon-git-log')} - Encountered an empty line while parsing log for file: "${underline(filePath)}"`)
+  // eslint-disable-next-line node/prefer-global/process
+  const tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
+  const shortLog = execSync(`git shortlog < ${tty} -s -n -e -c "${filePath}"`, { encoding: 'utf-8' })
+  // const log = execSync(`git log --follow --no-merges --pretty=format:'{"name": "%an", "email": "%ae"}' ${filePath}`, { encoding: 'utf-8' })
+  // const log = execSync(`git log --pretty=format:"%an" ${filePath} | sort | uniq -c | sort -k1,1nr`, { encoding: 'utf-8' })
+  consola.info('shortLog', shortLog)
+  const contributors = shortLog.split('\n')
+    .filter(line => line.trim() !== '')
+    .map((line) => {
+      if (!line.trim())
+        throw new Error(`${yellow('valaxy-addon-git-log')} - Encountered an empty line while parsing log for file: "${underline(filePath)}"`)
 
-    try {
-      const { name, email } = JSON.parse(line)
-      const avatar = gravatar.url(email)
-      return { name, email, avatar }
-    }
-    catch (error) {
-      throw new Error(
+      const match = line.match(/^\s*(\d+)\s+(.+)\s<(.+)>$/)
+      if (!match) {
+        throw new Error(`${yellow('valaxy-addon-git-log')} - Failed to parse line: "${blue(line)}"\n`
+          + ` ${dim('├─')} Error: Unable to match shortlog format\n`
+          + ` ${dim('└─')} File: "${underline(filePath)}"`)
+      }
+
+      try {
+      // const { name, email } = JSON.parse(line)
+        const [, count, name, email] = match
+        const avatar = gravatar.url(email)
+        // return { name, email, avatar }
+        return { count: Number.parseInt(count, 10), name, email, avatar }
+      }
+      catch (error) {
+        throw new Error(
         `${yellow('valaxy-addon-git-log')} - Failed to parse line: "${blue(line)}"\n`
         + ` ${dim('├─')} Error: ${red(error as any)}\n`
         + ` ${dim('└─')} File: "${underline(filePath)}"`,
-      )
-    }
-  })
+        )
+      }
+    })
+
   return contributors
 }
 

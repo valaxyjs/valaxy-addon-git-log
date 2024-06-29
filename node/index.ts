@@ -4,7 +4,7 @@ import { defineValaxyAddon } from 'valaxy'
 import consola from 'consola'
 import { blue, dim, underline, yellow } from 'picocolors'
 import pkg from '../package.json'
-import { countAndSortContributors, getContributors } from '../utils'
+import { getContributors } from '../utils'
 import type { GitLogOptions } from '../types'
 
 export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
@@ -36,15 +36,13 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
 
         try {
           const contributors = getContributors(filePath)
-          debugInfo += ` ${dim('├─')} ${blue('Contributors')}: ${JSON.stringify(contributors)}\n`
-          const sortedContributors = countAndSortContributors(contributors)
-          debugInfo += ` ${dim('└─')} ${blue('SortedContributors')}: ${JSON.stringify(sortedContributors)}\n`
+          debugInfo += ` ${dim('└─')} ${blue('Contributors')}: ${JSON.stringify(contributors)}\n`
           debugInfo += `${execSync(`git log --follow --no-merges -- ${filePath}`, { encoding: 'utf-8' })}`
 
           if (!route.meta.frontmatter.gitLogs)
             route.meta.frontmatter.gitLogContributors = []
 
-          sortedContributors.forEach((contributor) => {
+          contributors.forEach((contributor) => {
             route.meta.frontmatter.gitLogContributors.push(contributor)
           })
 
