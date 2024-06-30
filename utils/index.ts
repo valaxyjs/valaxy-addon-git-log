@@ -7,7 +7,7 @@ export function getContributors(filePath: string, mode: 'shortLog' | 'log', tty:
   // https://git-scm.com/docs/git-shortlog#_description
   let log
   if (mode === 'log') {
-    log = execSync(`git log --follow --no-merges --pretty=format:'%an <%ae>' ${filePath} | sort | uniq -c`, { encoding: 'utf-8' })
+    log = execSync(`git log --no-merges --pretty=format:'%an <%ae>' ${filePath} | sort | uniq -c`, { encoding: 'utf-8' })
   }
   else if (mode === 'shortLog') {
     // https://nodejs.org/api/child_process.html#optionsstdio

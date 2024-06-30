@@ -41,7 +41,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         try {
           const contributors = getContributors(filePath, contributorMode, tty)
           debugInfo += ` ${dim('└─')} ${blue('Contributors')}: ${JSON.stringify(contributors)}\n`
-          debugInfo += `${execSync(`git log --follow --no-merges -- ${filePath}`, { encoding: 'utf-8' })}`
+          debugInfo += `${execSync(`git log --no-merges -- ${filePath}`, { encoding: 'utf-8' })}`
 
           if (!route.meta.frontmatter.gitLogs)
             route.meta.frontmatter.gitLogContributors = []
