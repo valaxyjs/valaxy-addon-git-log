@@ -2,16 +2,21 @@ import { execSync } from 'node:child_process'
 import gravatar from 'gravatar'
 import { blue, dim, red, underline, yellow } from 'picocolors'
 import consola from 'consola'
-import type { Contributor } from '../types'
 
-export function getContributors(filePath: string) {
-  const command = `git shortlog -nesc "${filePath}"`
+export function getContributors(filePath: string, mode: 'shortLog' | 'log', tty: string) {
   // https://git-scm.com/docs/git-shortlog#_description
-  const shortLog = execSync(command, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf-8' })
-  // const log = execSync(`git log --follow --no-merges --pretty=format:'{"name": "%an", "email": "%ae"}' ${filePath}`, { encoding: 'utf-8' })
-  // const log = execSync(`git log --pretty=format:"%an" ${filePath} | sort | uniq -c | sort -k1,1nr`, { encoding: 'utf-8' })
-  consola.info('shortLog', shortLog)
-  const contributors = shortLog.split('\n')
+  let log
+  if (mode === 'log') {
+    log = execSync(`git log --follow --no-merges --pretty=format:'%an <%ae>' ${filePath} | sort | uniq -c`, { encoding: 'utf-8' })
+  }
+  else if (mode === 'shortLog') {
+    // https://nodejs.org/api/child_process.html#optionsstdio
+    // const log = execSync(`git shortlog -nesc ${filePath}`, { stdio: ['inherit', 'pipe', 'pipe'], encoding: 'utf-8' })
+    log = execSync(`git shortlog < ${tty} -nesc ${filePath}`, { encoding: 'utf-8' })
+  }
+
+  consola.info('shortLog', log)
+  const contributors = log!.split('\n')
     .filter(line => line.trim() !== '')
     .map((line) => {
       if (!line.trim())
@@ -46,19 +51,4 @@ export function getContributors(filePath: string) {
 export function getLastUpdated(filePath: string) {
   const lastUpdated = execSync(`git log -1 --format=%ct ${filePath}`, { encoding: 'utf-8' })
   return Number.parseInt(lastUpdated, 10) * 1000
-}
-
-export function countAndSortContributors(contributors: Array<{ name: string, email: string, avatar: string }>): Contributor[] {
-  // Count the number of submissions per author
-  const contributorCount = contributors.reduce((acc: { [key: string]: Contributor }, { name, email, avatar }) => {
-    const key = `${name}|${email}`
-    if (!acc[key])
-      acc[key] = { name, email, avatar, count: 0 }
-
-    acc[key].count += 1
-    return acc
-  }, {})
-
-  // Sort by number of submissions
-  return Object.values(contributorCount).sort((a, b) => b.count - a.count)
 }

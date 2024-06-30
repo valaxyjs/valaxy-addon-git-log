@@ -13,11 +13,12 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
   options,
 
   setup(valaxy) {
-    consola.info(`${yellow('valaxy-addon-git-log')}: ${blue('Platform')}: ${process.platform}`)
-    let tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
+    let contributorMode = options!.contributor?.mode || 'log'
+    const tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
 
     valaxy.hook('build:before', () => {
       try {
+        consola.info(`${yellow('valaxy-addon-git-log')}: ${blue('Platform')}: ${process.platform}`)
         consola.info(`${yellow('valaxy-addon-git-log')}: ${execSync('git --version')}`)
       }
       catch (error) {
@@ -38,7 +39,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         debugInfo += ` ${dim('├─')} ${blue('FilePath')}: ${underline(filePath)}\n`
 
         try {
-          const contributors = getContributors(filePath)
+          const contributors = getContributors(filePath, contributorMode, tty)
           debugInfo += ` ${dim('└─')} ${blue('Contributors')}: ${JSON.stringify(contributors)}\n`
           debugInfo += `${execSync(`git log --follow --no-merges -- ${filePath}`, { encoding: 'utf-8' })}`
 
@@ -56,7 +57,10 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         catch (error: any) {
           if (process.platform === 'linux' && error.message.includes(tty)) {
             consola.warn(`${yellow('valaxy-addon-git-log')}: The path ${tty} does not exist`)
-            tty = ''
+            contributorMode = 'log'
+          }
+          else {
+            consola.error(`${yellow('valaxy-addon-git-log')}: ${error}`)
           }
         }
       }

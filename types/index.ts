@@ -7,6 +7,7 @@ export interface Contributor {
 
 export interface GitLogOptions {
   debug: boolean
-  // contributor: {
-  // }
+  contributor?: {
+    mode?: 'shortLog' | 'log'
+  }
 }
