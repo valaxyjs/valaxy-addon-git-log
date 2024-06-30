@@ -24,7 +24,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
   enable: true,
   options: {
     ...options,
-    repositoryUrl: repository,
+    repositoryUrl: options?.repositoryUrl ?? repository,
   },
 
   setup(valaxy) {
