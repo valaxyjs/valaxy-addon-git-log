@@ -7,14 +7,26 @@ import pkg from '../package.json'
 import { getContributors } from '../utils'
 import type { GitLogOptions } from '../types'
 
+const repository = execSync(`git remote get-url origin`, { encoding: 'utf-8', timeout: 5000 }).trim()
+
 export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
   name: pkg.name,
   enable: true,
-  options,
+  options: {
+    ...options,
+    repositoryUrl: repository,
+  },
 
   setup(valaxy) {
-    let contributorMode = options!.contributor?.mode || 'log'
+    const _options = {
+      contributor: {
+        mode: options!.contributor?.mode || 'api',
+        logArgs: options!.contributor?.logArgs || '',
+      },
+    }
+
     const tty = process.platform === 'win32' ? 'CON' : '/dev/tty'
+    const basePath = execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim()
 
     valaxy.hook('build:before', () => {
       try {
@@ -35,6 +47,18 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
     valaxy.hook('vue-router:extendRoute', async (route) => {
       const filePath = route.components.get('default') as string
       if (filePath) {
+        if (!route.meta.frontmatter.git_log)
+          route.meta.frontmatter.git_log = {}
+
+        if (!route.meta.frontmatter.git_log.path)
+          route.meta.frontmatter.git_log.path = []
+
+        const gitRelativePath = filePath.replace(basePath, '').substring(1)
+        route.meta.frontmatter.git_log.path = gitRelativePath
+
+        if (_options.contributor.mode === 'api')
+          return
+
         // Only allow files from the user's working directory 'pages' folder
         const currentWorkingDirectory = `${process.cwd()}/pages`
         if (!filePath.startsWith(currentWorkingDirectory))
@@ -45,15 +69,14 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         debugInfo += ` ${dim('├─')} ${blue('FilePath')}: ${underline(filePath)}\n`
 
         try {
-          const contributors = getContributors(filePath, contributorMode, tty)
+          const contributors = getContributors(filePath, tty, _options)
           debugInfo += ` ${dim('└─')} ${blue('Contributors')}: ${JSON.stringify(contributors)}\n`
-          debugInfo += `${execSync(`git log --no-merges --first-parent --follow -- ${filePath}`, { encoding: 'utf-8' })}`
 
           if (!route.meta.frontmatter.gitLogs)
-            route.meta.frontmatter.gitLogContributors = []
+            route.meta.frontmatter.git_log.contributors = []
 
           contributors.forEach((contributor) => {
-            route.meta.frontmatter.gitLogContributors.push(contributor)
+            route.meta.frontmatter.git_log.contributors.push(contributor)
           })
 
           // Output debug information based on configuration or environment variables
@@ -63,7 +86,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         catch (error: any) {
           if (process.platform === 'linux' && error.message.includes(tty)) {
             consola.warn(`${yellow('valaxy-addon-git-log')}: The path ${tty} does not exist`)
-            contributorMode = 'log'
+            _options.contributor.mode = 'log'
           }
           else {
             consola.error(`${yellow('valaxy-addon-git-log')}: ${error}`)

@@ -1,21 +1,23 @@
 import { execSync } from 'node:child_process'
 import gravatar from 'gravatar'
 import { blue, dim, red, underline, yellow } from 'picocolors'
-import consola from 'consola'
+import type { GitLogOptions } from '../types'
 
-export function getContributors(filePath: string, mode: 'shortLog' | 'log', tty: string) {
+export function getContributors(filePath: string, tty: string, options: GitLogOptions) {
   // https://git-scm.com/docs/git-shortlog#_description
   let log
-  if (mode === 'log') {
-    log = execSync(`git log --no-merges --first-parent --follow --pretty=format:'%an <%ae>' -- ${filePath} | sort | uniq -c`, { encoding: 'utf-8' })
+  if (options.contributor?.mode === 'log') {
+    log = execSync(
+      `git log --no-merges ${options.contributor?.logArgs ?? ''} --pretty=format:'%an <%ae>' -- ${filePath} | sort | uniq -c`,
+      { encoding: 'utf-8', timeout: 5000, maxBuffer: 25000 * 1024 },
+    )
   }
-  else if (mode === 'shortLog') {
+  else if (options.contributor?.mode === 'shortLog') {
     // https://nodejs.org/api/child_process.html#optionsstdio
     // const log = execSync(`git shortlog -nesc ${filePath}`, { stdio: ['inherit', 'pipe', 'pipe'], encoding: 'utf-8' })
-    log = execSync(`git shortlog < ${tty} -nesc ${filePath}`, { encoding: 'utf-8' })
+    log = execSync(`git shortlog < ${tty} -nesc ${filePath}`, { encoding: 'utf-8', timeout: 5000, maxBuffer: 25000 * 1024 })
   }
 
-  consola.info('shortLog', log)
   const contributors = log!.split('\n')
     .filter(line => line.trim() !== '')
     .map((line) => {
