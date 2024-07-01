@@ -2,10 +2,14 @@ import type { Ref } from 'vue'
 import { computed, ref } from 'vue'
 import { useFrontmatter } from 'valaxy'
 import gravatar from 'gravatar'
+import { isClient } from '@vueuse/core'
 import { useAddonGitLogConfig } from '..'
 import type { Contributor } from '../../types'
 
 export function useAddonGitLogContributor() {
+  if (!isClient)
+    return
+
   const frontmatter = useFrontmatter()
   const gitLogOptions = useAddonGitLogConfig()
 
@@ -19,7 +23,7 @@ export function useAddonGitLogContributor() {
   const match = gitLogOptions.value.repositoryUrl!.match(/github\.com[/:](.+?)\/(.+?)(\.git)?$/)
 
   if (!match)
-    throw new Error('Invalid GitHub URL')
+    throw new Error('valaxy-addon-git-log: Invalid GitHub URL')
 
   const owner = match[1]
   const repo = match[2]
@@ -27,7 +31,7 @@ export function useAddonGitLogContributor() {
   fetch(`https://api.github.com/repos/${owner}/${repo}/commits?path=${path}`)
     .then((response) => {
       if (!response.ok)
-        throw new Error(`Network response was not ok ${response.statusText}`)
+        throw new Error(`Network response was not ok. Please check your repository and network connectivity.`)
 
       return response.json()
     })
@@ -50,7 +54,7 @@ export function useAddonGitLogContributor() {
       contributors.value.sort((a: any, b: any) => b.count - a.count)
     })
     .catch((error) => {
-      console.error('Error fetching contributors:', error)
+      console.error(`valaxy-addon-git-log: ${error}`)
     })
 
   return contributors
