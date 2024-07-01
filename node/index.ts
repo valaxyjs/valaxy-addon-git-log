@@ -4,28 +4,13 @@ import { defineValaxyAddon } from 'valaxy'
 import consola from 'consola'
 import { blue, bold, dim, green, magenta, underline, yellow } from 'picocolors'
 import pkg from '../package.json'
-import { getContributors } from '../utils'
 import type { GitLogOptions } from '../types'
-
-let repository = ''
-
-try {
-  repository = execSync(`git remote get-url origin`, { encoding: 'utf-8', timeout: 5000 }).trim()
-}
-catch (error) {
-  consola.error(`${yellow('valaxy-addon-git-log')}: Failed to get repository URL: `, error)
-  consola.info(`${yellow('valaxy-addon-git-log')}: Repository URL could not be automatically retrieved. Please configure the repository URL manually.`)
-  consola.info(`${yellow('valaxy-addon-git-log')}: ${execSync('git remote -v')}`)
-  repository = ''
-}
+import { getContributors } from './contributor'
 
 export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
   name: pkg.name,
   enable: true,
-  options: {
-    ...options,
-    repositoryUrl: options?.repositoryUrl ?? repository,
-  },
+  options,
 
   setup(valaxy) {
     const _options = {
