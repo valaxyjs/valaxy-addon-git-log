@@ -98,7 +98,7 @@ export default defineValaxyConfig<ThemeConfig>({
 | Name | Type | Default | Description |
 | ---- | ---- | ---- | ---- |
 | repositoryUrl | `string` | `undefined` | The URL of the repository. |
-| contributor.mode | `api` \| `log` \| `shortLog` | `api` | The method to generate Git information. |
+| contributor.mode | `'api'` \| `'log'` \| `'shortLog'` | `'api'` | The method to generate Git information. |
 | contributor.logArgs | `string` | `''` | Additional arguments for `git log` command. |
 | debug | `boolean` | `undefined` | Enable debug mode. |
 

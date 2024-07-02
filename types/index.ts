@@ -1,10 +1,10 @@
 export interface GitLogOptions {
-  debug?: boolean
+  repositoryUrl?: string
   contributor?: {
     mode?: 'shortLog' | 'log' | 'api'
     logArgs?: string
   }
-  repositoryUrl?: string
+  debug?: boolean
 }
 
 export interface Contributor {
