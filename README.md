@@ -1,16 +1,20 @@
-# valaxy-addon-git-log
+<h1 align="center">valaxy-addon-git-log</h1>
 
-## Installation
+<pre align="center">
+Integrate Valaxy's Git Logs plugin to display contributor information
+</pre>
 
-To install the `valaxy-addon-git-log`, run the following command:
+<p align="center">
+<a href="https://www.npmjs.com/package/valaxy-addon-git-log" rel="nofollow"><img src="https://img.shields.io/npm/v/valaxy-addon-git-log?color=0078E7" alt="NPM version"></a>
+</p>
+
+## Installing this Plugin
 
 ```bash
 pnpm add valaxy-addon-git-log
 ```
 
-## Configuration
-
-In your configuration file, import and define the addon:
+By default, the plugin retrieves Git information via API. Due to the limitations of static servers, it may not automatically obtain the repository address from the Git environment. Therefore, it is recommended to manually provide the repository address as shown below:
 
 ```ts
 import { defineValaxyConfig } from 'valaxy'
@@ -18,12 +22,19 @@ import { addonGitLog } from 'valaxy-addon-git-log'
 
 export default defineValaxyConfig({
   addons: [
-    addonGitLog(),
+    addonGitLog({
+      // contributor: {
+      //   mode: 'log',
+      // },
+      repositoryUrl: 'https://github.com/your-username/your-repository.git',
+    }),
   ],
 })
 ```
 
-## Basic Usage
+## Using this Plugin
+
+### Basic Usage
 
 To add Git contributors to a page, use the `GitLogContributor` component:
 
@@ -33,60 +44,66 @@ To add Git contributors to a page, use the `GitLogContributor` component:
 </template>
 ```
 
-## Customization
+### Customization
 
-When you add this plugin, it automatically includes `gitLogContributors` information in the `Frontmatter`. Here’s an example:
+If you are a theme developer or want to customize pages with git information, you can refer to the following example:
 
 ```vue
 <script setup lang="ts">
-import { useAddonGitLog } from '../client'
+import { useAddonGitLog } from 'valaxy-addon-git-log'
 
 const { contributors } = useAddonGitLog()
 </script>
 
 <template>
-  <div class="flex flex-wrap gap-4 pt-2">
-    <div v-for="(contributor, index) in contributors" :key="index" :title="contributor.email" class="flex gap-2 items-center">
-      <img :src="contributor.avatar" class="w-8 h-8 rounded-full">
+  <ul>
+    <li v-for="contributor in contributors" :key="contributor.email">
+      <img :src="contributor.avatar" alt="Avatar" width="30" height="30">
       {{ contributor.name }}
-    </div>
-  </div>
+    </li>
+  </ul>
 </template>
-
-<style lang="scss">
-// custom twikoo style
-</style>
 ```
 
-## Configuration items
+Regarding the full `contributors` parameter:
 
-You can configure the git-log addon in the following form.
+| Name | Type | Description |
+| ---- | ---- | ---- |
+| name | `string` | Contributor's name |
+| email | `string` | Contributor's email |
+| avatar | `string` | Contributor's avatar URL, obtained through gravatar based on email |
+| count | `number` | Number of contributions |
+
+Besides the `api` method, the `mode` option also includes `log` and `shortLog` methods. These methods allow you to generate Git information during build time, with the `git log` command by default adding the `--no-merges` parameter.
+
+> [!WARNING]
+> If you use the `log` or `shortLog` method to deploy projects on static servers (such as `Netlify`, `Vercel`), there may be restrictions. To ensure proper deployment on these platforms, please use the `api` method.
 
 ```ts
 export default defineValaxyConfig<ThemeConfig>({
-  // other configs.
   addons: [
-    // other addon configs.
     addonGitLog({
       debug: false,
       contributor: {
-        mode: 'api',
-        logArgs: '--first-parent --follow', // git command parameters
+        mode: 'log',
+        // logArgs: '--first-parent --follow',
       },
-      repositoryUrl: 'https://github.com/your_name/your_repository_name.git', // your repository url path
     }),
-    // other addon configs.
   ],
-  // other configs.
 })
 ```
 
-### Parameter analysis
+## Configuration / Options
 
-- `debug` : this param which is show log in terminal.Default value is `true`,that means you can see the log information on terminal when you build your valaxy.
-- `contributor.mode` :  this parm has three options: `api`,`log`,`shortLog`:
-  - `api`: you can use all the command, even in static service.
-  - `log`:
-  - `shortLog`:
-- `logArgs`: you can use any git command parameters in this config. [reference](<https://git-scm.com/book/en/v2>).
-- `repositoryUrl`: this param is your your repository url path which is you want to get contributor information
+| Name | Type | Default | Description |
+| ---- | ---- | ---- | ---- |
+| repositoryUrl | `string` | `undefined` | The URL of the repository. |
+| contributor.mode | `api` \| `log` \| `shortLog` | `api` | The method to generate Git information. |
+| contributor.logArgs | `string` | `''` | Additional arguments for `git log` command. |
+| debug | `boolean` | `undefined` | Enable debug mode. |
+
+## FAQ
+
+### Why does `shortLog` have no git information?
+
+The 'git shortlog' command requires reading some content from standard input. This plugin uses '/dev/tty' by default to obtain the controlling terminal device of the current process, serving as the input or output device. However, on static servers such as Vercel, these '/dev/tty' or Node.js's 'options.stdio' are restricted, leading to issues.
