@@ -1,6 +1,6 @@
 {
   "name": "valaxy-addon-git-log",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Integrates git logs into your page of Valaxy site.",
   "repository": "https://github.com/valaxyjs/valaxy-addon-git-log",
   "keywords": [
