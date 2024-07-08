@@ -76,7 +76,7 @@ Regarding the full `contributors` parameter:
 
 ## Configuration / Options
 
-In your project (wether theme or addon)
+In your project (wether theme or addon), you can write this in `valaxy.config.ts`.
 
 ```ts
 export default defineValaxyConfig<ThemeConfig>({
