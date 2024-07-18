@@ -24,6 +24,7 @@ export function getContributors(filePath: string, tty: string, options: GitLogOp
       if (!line.trim())
         throw new Error(`${yellow('valaxy-addon-git-log')} - Encountered an empty line while parsing log for file: "${underline(filePath)}"`)
 
+      // eslint-disable-next-line regexp/no-super-linear-backtracking
       const match = line.match(/^\s*(\d+)\s+(.+)\s<(.+)>$/)
       if (!match) {
         throw new Error(`${yellow('valaxy-addon-git-log')} - Failed to parse line: "${blue(line)}"\n`

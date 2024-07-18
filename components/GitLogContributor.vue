@@ -6,8 +6,8 @@ const { contributors } = useAddonGitLog()
 
 <template>
   <div class="flex flex-wrap gap-4 pt-2">
-    <div v-for="(contributor, index) in contributors" :key="index" :title="contributor.email" class="flex gap-2 items-center">
-      <img :src="contributor.avatar" class="w-8 h-8 rounded-full" loading="lazy">
+    <div v-for="(contributor, index) in contributors" :key="index" :title="contributor.email" class="flex items-center gap-2">
+      <img :src="contributor.avatar" class="h-8 w-8 rounded-full" loading="lazy">
       {{ contributor.name }}
     </div>
   </div>

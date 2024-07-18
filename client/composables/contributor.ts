@@ -20,6 +20,7 @@ export function useAddonGitLogContributor() {
   if (gitLogOptions.value.contributor?.mode !== 'api')
     return
 
+  // eslint-disable-next-line regexp/no-super-linear-backtracking
   const match = gitLogOptions.value.repositoryUrl!.match(/github\.com[/:](.+?)\/(.+?)(\.git)?$/)
 
   if (!match)
