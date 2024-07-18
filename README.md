@@ -74,10 +74,9 @@ Regarding the full `contributors` parameter:
 | avatar | `string` | Contributor's avatar URL, obtained through gravatar based on email |
 | count | `number` | Number of contributions |
 
-Besides the `api` method, the `mode` option also includes `log` and `shortLog` methods. These methods allow you to generate Git information during build time, with the `git log` command by default adding the `--no-merges` parameter.
+## Configuration / Options
 
-> [!WARNING]
-> If you use the `log` or `shortLog` method to deploy projects on static servers (such as `Netlify`, `Vercel`), there may be restrictions. To ensure proper deployment on these platforms, please use the `api` method.
+In your project (wether theme or addon), you can write this in `valaxy.config.ts`.
 
 ```ts
 export default defineValaxyConfig<ThemeConfig>({
@@ -93,14 +92,17 @@ export default defineValaxyConfig<ThemeConfig>({
 })
 ```
 
-## Configuration / Options
-
 | Name | Type | Default | Description |
 | ---- | ---- | ---- | ---- |
 | repositoryUrl | `string` | `undefined` | The URL of the repository. |
 | contributor.mode | `'api'` \| `'log'` \| `'shortLog'` | `'api'` | The method to generate Git information. |
 | contributor.logArgs | `string` | `''` | Additional arguments for `git log` command. |
 | debug | `boolean` | `undefined` | Enable debug mode. |
+
+Besides the `api` method, the `mode` option also includes `log` and `shortLog` methods. These methods allow you to generate Git information during build time, with the `git log` command by default adding the `--no-merges` parameter.
+
+> [!WARNING]
+> If you use the `log` or `shortLog` method to deploy projects on static servers (such as `Netlify`, `Vercel`), there may be restrictions. To ensure proper deployment on these platforms, please use the `api` method.
 
 ## FAQ
 
