@@ -41,9 +41,9 @@ export function getContributors(filePath: string, tty: string, options: GitLogOp
       }
       catch (error) {
         throw new Error(
-        `${yellow('valaxy-addon-git-log')} - Failed to parse line: "${blue(line)}"\n`
-        + ` ${dim('├─')} Error: ${red(error as any)}\n`
-        + ` ${dim('└─')} File: "${underline(filePath)}"`,
+          `${yellow('valaxy-addon-git-log')} - Failed to parse line: "${blue(line)}"\n`
+          + ` ${dim('├─')} Error: ${red(error as any)}\n`
+          + ` ${dim('└─')} File: "${underline(filePath)}"`,
         )
       }
     })
