@@ -1,6 +1,7 @@
 {
   "name": "valaxy-addon-git-log",
   "version": "0.1.1",
+  "packageManager": "pnpm@9.12.0",
   "description": "Integrates git logs into your page of Valaxy site.",
   "repository": "https://github.com/valaxyjs/valaxy-addon-git-log",
   "keywords": [
@@ -23,6 +24,6 @@
     "valaxy": "0.20.0-beta.5"
   },
   "scripts": {
-    "release": "bumpp && npm publish"
+    "release": "bumpp"
   }
 }
