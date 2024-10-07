@@ -16,6 +16,7 @@
     "valaxy": "latest"
   },
   "dependencies": {
+    "@octokit/rest": "^21.0.2",
     "gravatar": "^1.8.2"
   },
   "devDependencies": {
