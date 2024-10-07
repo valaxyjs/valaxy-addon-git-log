@@ -12,4 +12,5 @@ export interface Contributor {
   email: string
   avatar: string
   count: number
+  github?: string | null
 }
