@@ -13,7 +13,9 @@ export function useAddonGitLogContributor() {
   const frontmatter = useFrontmatter()
   const gitLogOptions = useAddonGitLogConfig()
 
-  const gitLog = computed(() => frontmatter.value.git_log)
+  const gitLog = computed(() => frontmatter.value.git_log || {
+    contributors: [],
+  })
 
   const contributors: Ref<Contributor[]> = ref(gitLog.value.contributors)
 
