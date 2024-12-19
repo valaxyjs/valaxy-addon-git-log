@@ -9,7 +9,7 @@ const { contributors } = useAddonGitLog()
     <li v-for="(contributor, index) in contributors" :key="index" flex="~ items-center gap-2">
       <span class="contributor-avatar">
         <a :href="contributor.github || ''" target="_blank" aria-label="Contributor image" :title="contributor.email">
-          <img :src="contributor.avatar" width="32" height="32" alt="paulgv" loading="lazy" decoding="async" rounded-full>
+          <img :src="contributor.avatar" width="32" height="32" :alt="contributor.name" loading="lazy" decoding="async" rounded-full>
         </a>
       </span>
 
