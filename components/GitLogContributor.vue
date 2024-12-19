@@ -5,10 +5,32 @@ const { contributors } = useAddonGitLog()
 </script>
 
 <template>
-  <div class="flex flex-wrap gap-4 pt-2">
-    <div v-for="(contributor, index) in contributors" :key="index" :title="contributor.email" class="flex items-center gap-2">
-      <img :src="contributor.avatar" class="h-8 w-8 rounded-full" loading="lazy">
-      {{ contributor.name }}
-    </div>
-  </div>
+  <ul class="git-log-contributor" flex="~ wrap gap-2" pt-2>
+    <li v-for="(contributor, index) in contributors" :key="index" flex="~ items-center gap-2">
+      <span class="contributor-avatar">
+        <a :href="contributor.github || ''" target="_blank" aria-label="Contributor image" :title="contributor.email">
+          <img :src="contributor.avatar" width="32" height="32" alt="paulgv" loading="lazy" decoding="async" rounded-full>
+        </a>
+      </span>
+
+      <span class="contributor-name">
+        <a :href="contributor.github || ''" target="_blank" :title="contributor.email">
+          {{ contributor.name }}
+        </a>
+      </span>
+    </li>
+  </ul>
 </template>
+
+<style lang="scss" scoped>
+.git-log-contributor {
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--va-c-primary);
+    }
+  }
+}
+</style>
