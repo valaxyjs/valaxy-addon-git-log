@@ -1,14 +1,15 @@
-import type { Ref } from 'vue'
-import { computed, ref } from 'vue'
-import { useFrontmatter } from 'valaxy'
-import gravatar from 'gravatar'
-import { isClient } from '@vueuse/core'
-import { Octokit } from '@octokit/rest'
-import { useAddonGitLogConfig } from '..'
+import type { MaybeRefOrGetter } from 'vue'
 import type { Contributor } from '../../types'
+import { Octokit } from '@octokit/rest'
+import { computedAsync, isClient } from '@vueuse/core'
+import gravatar from 'gravatar'
+import { useFrontmatter } from 'valaxy'
+import { computed, toValue } from 'vue'
+import { useAddonGitLogConfig } from '..'
+import { parseGithubUrl } from '../../utils'
 
 const octokit = new Octokit()
-export function useAddonGitLogContributor() {
+export function useAddonGitLogContributor(userPath?: MaybeRefOrGetter<string>) {
   if (!isClient)
     return
 
@@ -19,24 +20,21 @@ export function useAddonGitLogContributor() {
     contributors: [],
   })
 
-  const contributors: Ref<Contributor[]> = ref(gitLog.value.contributors)
-
   if (gitLogOptions.value.contributor?.mode !== 'api')
     return
 
-  // eslint-disable-next-line regexp/no-super-linear-backtracking
-  const match = gitLogOptions.value.repositoryUrl!.match(/github\.com[/:](.+?)\/(.+?)(\.git)?$/)
+  const { owner, repo } = parseGithubUrl(gitLogOptions.value.repositoryUrl!)
 
-  if (!match)
-    throw new Error('valaxy-addon-git-log: Invalid GitHub URL')
+  const autoPath = gitLog.value.path
 
-  const owner = match[1]
-  const repo = match[2]
-  const path = gitLog.value.path
-
-  fetchCommits(owner, repo, path).then((commits) => {
-    contributors.value = commits
-  })
+  const contributors = computedAsync<Contributor[]>(
+    async () => {
+      const path = toValue(userPath || autoPath)
+      return await fetchCommits(owner, repo, path)
+    },
+    gitLog.value.contributors,
+    { lazy: true },
+  )
 
   return contributors
 }
