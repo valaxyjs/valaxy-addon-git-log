@@ -1,10 +1,10 @@
-import type { ChangeLog } from '../types'
+import type { Changelog } from '../types'
 import { uniq } from '@vueuse/metadata'
 import { git } from '.'
 
-let cache: ChangeLog[] | undefined
+let cache: Changelog[] | undefined
 
-export async function getChangeLog(maxCount = 200, path?: string) {
+export async function getChangelog(maxCount = 200, path?: string) {
   if (cache)
     return cache
 
@@ -13,7 +13,7 @@ export async function getChangeLog(maxCount = 200, path?: string) {
       || i.message.includes('!')
       || i.message.startsWith('feat')
       || i.message.startsWith('fix')
-  }) as ChangeLog[]
+  }) as Changelog[]
 
   for (const log of logs) {
     if (log.message.includes('chore: release')) {

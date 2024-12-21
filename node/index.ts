@@ -4,7 +4,7 @@ import consola from 'consola'
 import Git from 'simple-git'
 import { defineValaxyAddon } from 'valaxy'
 import pkg from '../package.json'
-import { getChangeLog } from './changeLog'
+import { getChangelog } from './changeLog'
 import { getContributors } from './contributor'
 
 export const git = Git({
@@ -39,12 +39,12 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         if (!filePath.startsWith(currentWorkingDirectory))
           return
 
-        if (options?.contributor?.mode === 'log') {
+        if (options?.contributor?.mode === 'git') {
           try {
             const contributors = await getContributors(filePath, options)
             route.meta.frontmatter.git_log.contributors = contributors
 
-            const changeLog = await getChangeLog(process.env.CI ? 1000 : 100, filePath)
+            const changeLog = await getChangelog(process.env.CI ? 1000 : 100, filePath)
             route.meta.frontmatter.git_log.changeLog = changeLog
           }
           catch (error) {

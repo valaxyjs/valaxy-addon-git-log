@@ -28,6 +28,7 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
             name: i[0],
             email: i[1],
             avatar: gravatar.url(i[1]),
+            github: null,
             hash: md5(i[1]),
           }
         }
