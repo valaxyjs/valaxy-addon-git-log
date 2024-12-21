@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { Contributor } from '../types'
 import { computed } from 'vue'
-import { useAddonGitLogContributor } from '../client'
+import { useContributor } from '../client'
 
 const props = defineProps<{
   contributors?: Contributor[]
 }>()
 
-const gitLogContributor = useAddonGitLogContributor()
+const gitLogContributor = useContributor()
 
 const contributors = computed(() => props.contributors || gitLogContributor?.value)
 </script>

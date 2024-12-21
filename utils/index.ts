@@ -1,1 +1,2 @@
-export * from './parseUrl'
+export * from './parse'
+export * from './render'
