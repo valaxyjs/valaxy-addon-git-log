@@ -1,7 +1,7 @@
 import type { MaybeRefOrGetter, Ref } from 'vue'
 import type { Contributor } from '../../types'
 import { computedAsync } from '@vueuse/core'
-import { toRef, toValue } from 'vue'
+import { computed, toValue } from 'vue'
 import { parseGithubUrl } from '../../utils'
 import { useAddonGitLogConfig } from '../options'
 import { fetchContributors } from '../services'
@@ -12,7 +12,7 @@ export function useContributor(path?: MaybeRefOrGetter<string>): Ref<Contributor
   const gitLogOptions = useAddonGitLogConfig()
 
   if (gitLogOptions.value.contributor?.mode !== 'api')
-    return toRef([])
+    return computed(() => gitLog.value.contributors)
 
   const contributors = computedAsync<Contributor[]>(
     async () => {

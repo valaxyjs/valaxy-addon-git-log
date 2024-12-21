@@ -1,7 +1,7 @@
 import type { MaybeRefOrGetter, Ref } from 'vue'
 import type { ChangeLog } from '../../types'
 import { computedAsync } from '@vueuse/core'
-import { toRef } from 'vue'
+import { computed } from 'vue'
 import { useAddonGitLogConfig } from '../options'
 import { useGitLog } from './gitlog'
 
@@ -10,7 +10,7 @@ export function useChangeLog(_path?: MaybeRefOrGetter<string>): Ref<ChangeLog[]>
   const gitLogOptions = useAddonGitLogConfig()
 
   if (gitLogOptions.value.contributor?.mode !== 'api')
-    return toRef([])
+    return computed(() => gitLog.value.changeLog)
 
   const contributors = computedAsync<ChangeLog[]>(
     async () => {
