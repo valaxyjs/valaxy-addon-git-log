@@ -67,12 +67,12 @@ const { contributors } = useAddonGitLog()
 
 Regarding the full `contributors` parameter:
 
-| Name | Type | Description |
-| ---- | ---- | ---- |
-| name | `string` | Contributor's name |
-| email | `string` | Contributor's email |
+| Name   | Type     | Description                                                        |
+| ------ | -------- | ------------------------------------------------------------------ |
+| name   | `string` | Contributor's name                                                 |
+| email  | `string` | Contributor's email                                                |
 | avatar | `string` | Contributor's avatar URL, obtained through gravatar based on email |
-| count | `number` | Number of contributions |
+| count  | `number` | Number of contributions                                            |
 
 ## Configuration / Options
 
@@ -82,7 +82,6 @@ In your project (wether theme or addon), you can write this in `valaxy.config.ts
 export default defineValaxyConfig<ThemeConfig>({
   addons: [
     addonGitLog({
-      debug: false,
       contributor: {
         mode: 'log',
         // logArgs: '--first-parent --follow',
@@ -92,12 +91,11 @@ export default defineValaxyConfig<ThemeConfig>({
 })
 ```
 
-| Name | Type | Default | Description |
-| ---- | ---- | ---- | ---- |
-| repositoryUrl | `string` | `undefined` | The URL of the repository. |
-| contributor.mode | `'api'` \| `'log'` \| `'shortLog'` | `'api'` | The method to generate Git information. |
-| contributor.logArgs | `string` | `''` | Additional arguments for `git log` command. |
-| debug | `boolean` | `undefined` | Enable debug mode. |
+| Name                | Type                               | Default     | Description                                 |
+| ------------------- | ---------------------------------- | ----------- | ------------------------------------------- |
+| repositoryUrl       | `string`                           | `undefined` | The URL of the repository.                  |
+| contributor.mode    | `'api'` \| `'log'` \| `'shortLog'` | `'api'`     | The method to generate Git information.     |
+| contributor.logArgs | `string`                           | `''`        | Additional arguments for `git log` command. |
 
 Besides the `api` method, the `mode` option also includes `log` and `shortLog` methods. These methods allow you to generate Git information during build time, with the `git log` command by default adding the `--no-merges` parameter.
 
