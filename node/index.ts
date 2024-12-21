@@ -15,10 +15,10 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
   name: pkg.name,
   enable: true,
   options: {
-    ...options,
     contributor: {
       mode: 'api',
     },
+    ...options,
   },
 
   async setup(valaxy) {

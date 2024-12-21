@@ -15,16 +15,20 @@ const contributors = computed(() => props.contributors || gitLogContributor?.val
 <template>
   <ul class="git-log-contributor" flex="~ wrap gap-2" pt-2>
     <li v-for="(contributor, index) in contributors" :key="index" flex="~ items-center gap-2">
-      <span class="contributor-avatar">
-        <a :href="contributor.github || ''" target="_blank" aria-label="Contributor image" :title="contributor.email">
-          <img :src="contributor.avatar" width="32" height="32" :alt="contributor.name" loading="lazy" decoding="async" rounded-full>
-        </a>
+      <span class="contributor-avatar" :title="contributor.email">
+        <img
+          :src="contributor.avatar" width="32" height="32" aria-label="Contributor image"
+          :alt="contributor.name" loading="lazy" decoding="async" rounded-full
+        >
       </span>
 
       <span class="contributor-name">
-        <a :href="contributor.github || ''" target="_blank" :title="contributor.email">
+        <a v-if="contributor?.github" :href="contributor.github" :title="contributor.github" target="_blank">
           {{ contributor.name }}
         </a>
+        <template v-else>
+          {{ contributor.name }}
+        </template>
       </span>
     </li>
   </ul>

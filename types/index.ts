@@ -9,8 +9,10 @@ export interface GitLogOptions {
 }
 
 export interface Contributor extends ContributorInfo {
+  name: string
   email: string
   avatar: string
+  count: number
   github?: string | null
 }
 
