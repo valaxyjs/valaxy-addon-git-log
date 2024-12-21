@@ -1,9 +1,9 @@
 import type { Plugin } from 'vite'
-import type { ChangeLog as ChangeLogType } from '../types'
+import type { Changelog as ChangelogType } from '../types'
 
 const ID = 'virtual:git-log/changelog'
 
-export function ChangeLog(data: ChangeLogType[]): Plugin {
+export function Changelog(data: ChangelogType[]): Plugin {
   return {
     name: 'git-log-changelog',
     resolveId(id) {
