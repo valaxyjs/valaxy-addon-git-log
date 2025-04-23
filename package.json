@@ -16,7 +16,7 @@
     "release": "bumpp"
   },
   "peerDependencies": {
-    "valaxy": "latest"
+    "valaxy": ">=0.22"
   },
   "dependencies": {
     "@octokit/rest": "^21.0.2",
