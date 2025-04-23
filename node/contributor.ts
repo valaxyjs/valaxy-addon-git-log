@@ -5,37 +5,39 @@ import md5 from 'md5'
 import { git } from '.'
 
 export async function getContributors(filePath?: string, options?: GitLogOptions): Promise<Contributor[]> {
+  const { contributor } = options || {}
+
   try {
-    const gitArgs: string[] = ['log', '--no-merges', '--pretty=format:"%an|%ae"']
+    const gitArgs: string[] = ['log', '--pretty=format:"%an|%ae"']
 
     const additionalArgs: string[] = [
-      filePath ? '--' : null,
+      filePath && `--`,
       filePath,
-      options?.contributor?.logArgs,
+      contributor?.logArgs,
     ].filter((arg): arg is string => arg != null)
 
-    const gitLog = await git.raw(gitArgs.concat(additionalArgs))
-    const list = gitLog.split('\n').map(i => i.slice(1, -1).split('|') as [string, string])
+    const gitLog = await git.raw([...gitArgs, ...additionalArgs])
 
-    const map: Record<string, Contributor> = {}
-
-    list
-      .filter(i => i[1])
-      .forEach((i) => {
-        if (!map[i[1]]) {
-          map[i[1]] = {
+    const contributorsMap = gitLog
+      .split('\n')
+      .map(line => line.slice(1, -1).split('|') as [string, string])
+      .filter(([_, email]) => email)
+      .reduce((acc, [name, email]) => {
+        if (!acc[email]) {
+          acc[email] = {
             count: 0,
-            name: i[0],
-            email: i[1],
-            avatar: gravatar.url(i[1]),
+            name,
+            email,
+            avatar: gravatar.url(email),
             github: null,
-            hash: md5(i[1]),
+            hash: md5(email),
           }
         }
-        map[i[1]].count++
-      })
+        acc[email].count++
+        return acc
+      }, {} as Record<string, Contributor>)
 
-    return Object.values(map).sort((a, b) => b.count - a.count)
+    return Object.values(contributorsMap).sort((a, b) => b.count - a.count)
   }
   catch (e) {
     console.error(e)
