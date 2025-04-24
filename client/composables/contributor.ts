@@ -10,19 +10,21 @@ import { useGitLog } from './gitlog'
 export function useContributor(path?: MaybeRefOrGetter<string>): Ref<Contributor[]> {
   const gitLog = useGitLog()
   const gitLogOptions = useAddonGitLogConfig()
+  const source = gitLogOptions.value.contributor?.source
 
-  if (gitLogOptions.value.contributor?.source !== 'runtime')
-    return computed(() => gitLog.value.contributors)
+  if (source === 'runtime') {
+    const contributors = computedAsync<Contributor[]>(
+      async () => {
+        const { owner, repo } = parseGithubUrl(gitLogOptions.value.repositoryUrl!)
+        const _path = toValue(path || gitLog.value.path)
+        return await fetchContributors(owner, repo, _path)
+      },
+      gitLog.value.contributors,
+      { lazy: true },
+    )
 
-  const contributors = computedAsync<Contributor[]>(
-    async () => {
-      const { owner, repo } = parseGithubUrl(gitLogOptions.value.repositoryUrl!)
-      const _path = toValue(path || gitLog.value.path)
-      return await fetchContributors(owner, repo, _path)
-    },
-    gitLog.value.contributors,
-    { lazy: true },
-  )
+    return contributors
+  }
 
-  return contributors
+  return computed(() => gitLog.value.contributors)
 }

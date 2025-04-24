@@ -41,3 +41,7 @@ export interface GitLog {
   changeLog: Changelog[]
   path: string
 }
+
+export interface GitLogFileEntry {
+  [path: string]: GitLog
+}

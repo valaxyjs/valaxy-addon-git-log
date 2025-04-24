@@ -8,18 +8,20 @@ import { useGitLog } from './gitlog'
 export function useChangelog(_path?: MaybeRefOrGetter<string>): Ref<Changelog[]> {
   const gitLog = useGitLog()
   const gitLogOptions = useAddonGitLogConfig()
+  const source = gitLogOptions.value.contributor?.source
 
-  if (gitLogOptions.value.contributor?.source !== 'runtime')
-    return computed(() => gitLog.value.changeLog)
+  if (source === 'runtime') {
+    const contributors = computedAsync<Changelog[]>(
+      async () => {
+        // TODO: Complete the API-based method
+        return []
+      },
+      gitLog.value.changeLog,
+      { lazy: true },
+    )
 
-  const contributors = computedAsync<Changelog[]>(
-    async () => {
-      // TODO: Complete the API-based method
-      return []
-    },
-    gitLog.value.changeLog,
-    { lazy: true },
-  )
+    return contributors
+  }
 
-  return contributors
+  return computed(() => gitLog.value.changeLog)
 }
