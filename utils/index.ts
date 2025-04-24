@@ -1,2 +1,2 @@
-export * from './parse'
+export * from './github'
 export * from './render'
