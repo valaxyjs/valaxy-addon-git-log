@@ -1,6 +1,6 @@
 {
   "name": "valaxy-addon-git-log",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "packageManager": "pnpm@9.15.0",
   "description": "Integrates git logs into your page of Valaxy site.",
   "repository": "https://github.com/valaxyjs/valaxy-addon-git-log",
@@ -20,14 +20,16 @@
   },
   "dependencies": {
     "@octokit/rest": "^21.0.2",
+    "fs-extra": "^11.3.0",
     "gravatar": "^1.8.2",
     "md5": "^2.3.0",
     "simple-git": "^3.27.0"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
     "@types/gravatar": "^1.8.6",
     "@types/md5": "^2.3.5",
-    "bumpp": "^9.9.1",
-    "valaxy": "^0.22.4"
+    "bumpp": "^10.1.0",
+    "valaxy": "^0.23.0"
   }
 }
