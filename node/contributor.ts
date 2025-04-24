@@ -3,6 +3,7 @@ import { execSync } from 'node:child_process'
 import gravatar from 'gravatar'
 import md5 from 'md5'
 import { git } from '.'
+import { guessGitHubUsername } from '../utils'
 
 export async function getContributors(filePath?: string, options?: GitLogOptions): Promise<Contributor[]> {
   const { contributor } = options || {}
@@ -29,7 +30,7 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
             name,
             email,
             avatar: gravatar.url(email),
-            github: null,
+            github: guessGitHubUsername(email),
             hash: md5(email),
           }
         }
