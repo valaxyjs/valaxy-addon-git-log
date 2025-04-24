@@ -9,7 +9,7 @@ export function useChangelog(_path?: MaybeRefOrGetter<string>): Ref<Changelog[]>
   const gitLog = useGitLog()
   const gitLogOptions = useAddonGitLogConfig()
 
-  if (gitLogOptions.value.contributor?.mode !== 'api')
+  if (gitLogOptions.value.contributor?.source !== 'runtime')
     return computed(() => gitLog.value.changeLog)
 
   const contributors = computedAsync<Changelog[]>(

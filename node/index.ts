@@ -16,7 +16,9 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
   enable: true,
   options: {
     contributor: {
-      mode: 'api',
+      source: options?.contributor?.mode === 'api'
+        ? 'runtime'
+        : options?.contributor?.mode === 'git' ? 'build-time' : 'prebuilt',
     },
     ...options,
   },
