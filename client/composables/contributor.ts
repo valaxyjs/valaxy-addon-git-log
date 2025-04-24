@@ -11,7 +11,7 @@ export function useContributor(path?: MaybeRefOrGetter<string>): Ref<Contributor
   const gitLog = useGitLog()
   const gitLogOptions = useAddonGitLogConfig()
 
-  if (gitLogOptions.value.contributor?.mode !== 'api')
+  if (gitLogOptions.value.contributor?.source !== 'runtime')
     return computed(() => gitLog.value.contributors)
 
   const contributors = computedAsync<Contributor[]>(

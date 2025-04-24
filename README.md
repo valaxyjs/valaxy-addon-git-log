@@ -71,7 +71,7 @@ export default defineValaxyConfig<ThemeConfig>({
   addons: [
     addonGitLog({
       contributor: {
-        mode: 'api',
+        strategy: 'prebuilt', // 'prebuilt' | 'build-time' | 'runtime',
         // logArgs: '--first-parent --follow',
       },
     }),
@@ -79,14 +79,20 @@ export default defineValaxyConfig<ThemeConfig>({
 })
 ```
 
-| Name                | Type               | Default     | Description                                                                                                                                                                                                                   |
-| ------------------- | ------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| repositoryUrl       | `string`           | `undefined` | The URL of the GitHub repository. This is used to specify the repository from which to fetch information.                                                                                                                     |
-| contributor.mode    | `'api'` \| `'git'` | `'api'`     | Defines the method to retrieve Git contributor information. If set to `'api'`, the GitHub API is used. If set to `'log'`, the `git log` command is used during build time, with the `--no-merges` parameter added by default. |
-| contributor.logArgs | `string`           | `''`        | Additional arguments passed to the `git log` command when `contributor.mode` is set to `'git'`. These arguments can customize the `git log` query (e.g., limiting the number of commits, filtering by date, etc.).            |
+| Name                   | Type                     | Default      | Description |
+|------------------------|--------------------------|--------------|-------------|
+| repositoryUrl          | `string`                | `undefined`  | GitHub repository URL |
+| contributor.strategy   | `'prebuilt'` \| `'build-time'` \| `'runtime'` | `'prebuilt'` | Data fetching strategy |
+| contributor.logArgs    | `string`                | `''`         | Git log arguments (for 'prebuilt' and 'build-time') |
+| contributor.githubToken| `string`                | `undefined`  | GitHub token (required for 'runtime' strategy) |
 
-> [!WARNING]
-> If you use the `git` method to deploy projects on static servers (such as `Netlify`, `Vercel`), there may be restrictions. To ensure proper deployment on these platforms, please use the `api` method.
+### Strategy Comparison
+
+| Strategy     | Build Requirement | Data Freshness | Host Compatibility | Rate Limiting | Recommended Use Case |
+|--------------|-------------------|----------------|--------------------|---------------|----------------------|
+| **prebuilt** | Requires local Git | ⚠️ Static snapshot | ✅ All static hosts | ✅ None | Static site generation (SSG) |
+| **build-time** | Needs CI Git access | ✅ Build-time fresh | ❌ Limited on:<br>• Vercel<br>• Netlify<br>• Cloudflare Pages | ✅ None | Self-hosted CI |
+| **runtime**  | No build tools | ✅ Real-time | ✅ Universal | ⚠️ GitHub API:<br>• 60/hr (anon)<br>• 5000/hr (authed) | Client-side rendered |
 
 ## Components
 
