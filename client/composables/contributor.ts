@@ -10,9 +10,9 @@ import { useGitLog } from './gitlog'
 export function useContributor(path?: MaybeRefOrGetter<string>): Ref<Contributor[]> {
   const gitLog = useGitLog()
   const gitLogOptions = useAddonGitLogConfig()
-  const source = gitLogOptions.value.contributor?.source
+  const strategy = gitLogOptions.value.contributor?.strategy
 
-  if (source === 'runtime') {
+  if (strategy === 'runtime') {
     const contributors = computedAsync<Contributor[]>(
       async () => {
         const { owner, repo } = parseGithubUrl(gitLogOptions.value.repositoryUrl!)
