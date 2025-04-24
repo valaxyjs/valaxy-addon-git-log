@@ -9,7 +9,7 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
   const { contributor } = options || {}
 
   try {
-    const gitArgs: string[] = ['log', '--pretty=format:"%an|%ae"']
+    const gitArgs: string[] = ['log', '--no-merges', '--pretty=format:"%an|%ae"']
 
     const additionalArgs: string[] = [
       filePath && `--`,
