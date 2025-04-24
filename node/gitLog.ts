@@ -21,10 +21,10 @@ export function getBasePath() {
 }
 
 export async function handleGitLogInfo(options: GitLogOptions, route: EditableTreeNode) {
-  const source = options.contributor?.source
-  const isPrebuilt = source === 'prebuilt'
-  const isBuildTime = source === 'build-time'
-  // const isRuntime = source === 'runtime'
+  const strategy = options.contributor?.strategy
+  const isPrebuilt = strategy === 'prebuilt'
+  const isBuildTime = strategy === 'build-time'
+  // const isRuntime = strategy === 'runtime'
 
   const filePath = route.components.get('default')
   if (!filePath)

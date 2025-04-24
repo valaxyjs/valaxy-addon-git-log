@@ -17,7 +17,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
     options,
     {
       contributor: {
-        source: options?.contributor?.mode === 'api'
+        strategy: options?.contributor?.mode === 'api'
           ? 'runtime'
           : options?.contributor?.mode === 'git' ? 'build-time' : 'prebuilt',
       },
@@ -26,7 +26,7 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
 
   setup(valaxy) {
     if (options?.contributor?.mode)
-      consola.warn('valaxy-addon-git-log: contributor.mode is deprecated. Please use contributor.source instead.')
+      consola.warn('valaxy-addon-git-log: contributor.mode is deprecated. Please use contributor.strategy instead.')
 
     git.revparse(['--show-toplevel'])
       .then((result) => {

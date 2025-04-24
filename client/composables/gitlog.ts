@@ -19,8 +19,8 @@ export function useGitLog(): Ref<GitLog> {
   const gitLogOptions = useAddonGitLogConfig()
   const gitLogData = ref<GitLog>(initGitLog)
 
-  const source = gitLogOptions.value.contributor?.source
-  const isPrebuilt = source === 'prebuilt'
+  const strategy = gitLogOptions.value.contributor?.strategy
+  const isPrebuilt = strategy === 'prebuilt'
   const path = frontmatter.value.git_log?.path
 
   if (isPrebuilt && path) {

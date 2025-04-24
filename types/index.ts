@@ -4,7 +4,7 @@ export interface GitLogOptions {
   repositoryUrl?: string
   contributor?: {
     /**
-     * @deprecated Use `source` instead
+     * @deprecated Use `strategy` instead
      */
     mode?: 'git' | 'api'
     /**
@@ -15,9 +15,9 @@ export interface GitLogOptions {
      * - 'build-time': Fetch during build process (may fail on restricted CI environments)
      * - 'runtime': Fetch at runtime via API (subject to rate limits but always fresh)
      */
-    source?: 'prebuilt' | 'build-time' | 'runtime'
+    strategy?: 'prebuilt' | 'build-time' | 'runtime'
     /**
-     * Additional arguments for git log command when source is 'git-log'
+     * Additional arguments for git log command when strategy is 'git-log'
      * @example '--no-merges'
      */
     logArgs?: string
