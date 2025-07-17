@@ -25,12 +25,15 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
       .filter(([_, email]) => email)
       .reduce((acc, [name, email]) => {
         if (!acc[email]) {
+          const githubUsername = guessGitHubUsername(email)
           acc[email] = {
             count: 0,
             name,
             email,
-            avatar: gravatar.url(email),
-            github: guessGitHubUsername(email),
+            avatar: githubUsername
+              ? `https://github.com/${githubUsername}.png`
+              : gravatar.url(email),
+            github: githubUsername ? `https://github.com/${githubUsername}` : null,
             hash: md5(email),
           }
         }
