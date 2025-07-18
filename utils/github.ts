@@ -13,5 +13,5 @@ export function parseGithubUrl(url: string) {
 
 export function guessGitHubUsername(email: string): string | null {
   const match = email.match(/^(\d+\+)?([^@]+)@users\.noreply\.github\.com$/)
-  return match ? `https://github.com/${match[2]}` : null
+  return match ? match[2] : null
 }
