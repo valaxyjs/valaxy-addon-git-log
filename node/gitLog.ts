@@ -24,6 +24,10 @@ export function initBasePath() {
   basePathPromise = git.revparse(['--show-toplevel']).then((result) => {
     basePath = result.trim()
     return basePath
+  }).catch((error) => {
+    consola.warn('valaxy-addon-git-log: Could not resolve git root, falling back to cwd.', error)
+    basePath = process.cwd()
+    return basePath
   })
   return basePathPromise
 }
@@ -73,7 +77,14 @@ export async function handleGitLogInfo(options: GitLogOptions, route: EditableTr
     route.meta.frontmatter.git_log = {}
 
   // Ensure basePath is available before computing relative path
-  const resolvedBase = await ensureBasePath()
+  let resolvedBase: string
+  try {
+    resolvedBase = await ensureBasePath()
+  }
+  catch {
+    // Fallback: use cwd-relative path
+    resolvedBase = process.cwd()
+  }
 
   const gitRelativePath = path.relative(resolvedBase, filePath).split(path.sep).join('/')
   route.meta.frontmatter.git_log.path = gitRelativePath
@@ -172,11 +183,13 @@ async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxC
     return result
 
   try {
+    // Note: --max-count is omitted because with multiple pathspecs it limits
+    // the *global* commit count, not per-file. We fetch all matching commits
+    // and truncate each file's array to `maxCount` in JS below.
     const raw = await git.raw([
       'log',
-      `--max-count=${maxCount}`,
       '--name-only',
-      '--pretty=format:---CL_SEP---%H|%an|%ae|%aI|%s',
+      '--pretty=format:---CL_SEP---%H|%an|%ae|%aI|%s|%b',
       '--',
       ...filePaths,
     ])
@@ -227,8 +240,13 @@ async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxC
     consola.error('valaxy-addon-git-log: Error batch-fetching changelogs:', e)
   }
 
+  // Truncate each file's changelog to maxCount to match per-file semantics
+  for (const [fp, logs] of result) {
+    if (logs.length > maxCount)
+      result.set(fp, logs.slice(0, maxCount))
+  }
+
   return result
-}
 
 /**
  * Process all pending routes in batch: 2 git commands for ALL files
@@ -245,7 +263,14 @@ export async function flushGitLogBatch(options: GitLogOptions) {
   const isPrebuilt = strategy === 'prebuilt'
   const isBuildTime = strategy === 'build-time'
 
-  const resolvedBase = await ensureBasePath()
+  let resolvedBase: string
+  try {
+    resolvedBase = await ensureBasePath()
+  }
+  catch (error) {
+    consola.error('valaxy-addon-git-log: Failed to resolve git root in flushGitLogBatch, skipping.', error)
+    return
+  }
 
   const filePaths = routes.map(r => r.filePath)
   const maxCount = process.env.CI ? 1000 : 100
