@@ -4,7 +4,7 @@ import defu from 'defu'
 import Git from 'simple-git'
 import { defineValaxyAddon } from 'valaxy'
 import pkg from '../package.json'
-import { flushGitLogBatch, handleGitLogInfo, setBasePath } from './gitLog'
+import { flushGitLogBatch, handleGitLogInfo, initBasePath } from './gitLog'
 
 export const git = Git({
   maxConcurrentProcesses: 200,
@@ -28,14 +28,10 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
     if (options?.contributor?.mode)
       consola.warn('valaxy-addon-git-log: contributor.mode is deprecated. Please use contributor.strategy instead.')
 
-    git.revparse(['--show-toplevel'])
-      .then((result) => {
-        const basePath = result.trim()
-        setBasePath(basePath)
-      })
-      .catch((error) => {
-        consola.error('valaxy-addon-git-log: Error getting git root directory:', error)
-      })
+    // Start resolving basePath early; callers use ensureBasePath() to await it
+    initBasePath().catch((error) => {
+      consola.error('valaxy-addon-git-log: Error getting git root directory:', error)
+    })
 
     // Phase 1: collect routes (no git calls, instant)
     valaxy.hook('vue-router:extendRoute', async (route) => {

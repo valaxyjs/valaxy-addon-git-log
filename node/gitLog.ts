@@ -1,5 +1,5 @@
 import type { EditableTreeNode } from 'unplugin-vue-router'
-import type { Contributor, GitLogFileEntry, GitLogOptions } from '../types'
+import type { Changelog, Contributor, GitLogFileEntry, GitLogOptions } from '../types'
 import path from 'node:path'
 import process from 'node:process'
 import consola from 'consola'
@@ -7,16 +7,38 @@ import gravatar from 'gravatar'
 import md5 from 'md5'
 import fs from 'fs-extra'
 import { git } from '.'
-import { getChangelog } from './changeLog'
 import { guessGitHubUsername } from '../utils'
 
 export const destDir = path.resolve(process.cwd(), './public')
 // Only allow files from the user's working directory 'pages' folder
 export const currentWorkingDirectory = `${process.cwd()}/pages`
-let basePath: string
 
-export function setBasePath(path: string) {
-  basePath = path
+/**
+ * basePath is resolved asynchronously via `git revparse`. Store the promise
+ * so that callers can `await` it instead of racing against `setBasePath`.
+ */
+let basePathPromise: Promise<string> | undefined
+let basePath: string | undefined
+
+export function initBasePath() {
+  basePathPromise = git.revparse(['--show-toplevel']).then((result) => {
+    basePath = result.trim()
+    return basePath
+  })
+  return basePathPromise
+}
+
+export async function ensureBasePath(): Promise<string> {
+  if (basePath)
+    return basePath
+  if (basePathPromise)
+    return basePathPromise
+  return initBasePath()
+}
+
+/** @deprecated Use ensureBasePath() instead */
+export function setBasePath(p: string) {
+  basePath = p
 }
 
 export function getBasePath() {
@@ -50,7 +72,10 @@ export async function handleGitLogInfo(options: GitLogOptions, route: EditableTr
   if (!route.meta.frontmatter.git_log)
     route.meta.frontmatter.git_log = {}
 
-  const gitRelativePath = filePath.replace(basePath, '').substring(1)
+  // Ensure basePath is available before computing relative path
+  const resolvedBase = await ensureBasePath()
+
+  const gitRelativePath = filePath.replace(resolvedBase, '').substring(1)
   route.meta.frontmatter.git_log.path = gitRelativePath
 
   if (!isPrebuilt && !isBuildTime)
@@ -66,7 +91,7 @@ export async function handleGitLogInfo(options: GitLogOptions, route: EditableTr
  * Batch-fetch contributors for all files in a single git command.
  * Returns a map of filePath -> Contributor[].
  */
-async function batchGetContributors(filePaths: string[], options?: GitLogOptions): Promise<Map<string, Contributor[]>> {
+async function batchGetContributors(resolvedBase: string, filePaths: string[], options?: GitLogOptions): Promise<Map<string, Contributor[]>> {
   const result = new Map<string, Contributor[]>()
   if (!filePaths.length)
     return result
@@ -104,7 +129,7 @@ async function batchGetContributors(filePaths: string[], options?: GitLogOptions
       const files = lines.slice(1).filter(Boolean)
       for (const file of files) {
         // Resolve to absolute path for matching
-        const absPath = path.resolve(basePath, file)
+        const absPath = path.resolve(resolvedBase, file)
         if (!fileContribMap.has(absPath))
           fileContribMap.set(absPath, {})
 
@@ -126,8 +151,8 @@ async function batchGetContributors(filePaths: string[], options?: GitLogOptions
       }
     }
 
-    for (const [filePath, contribs] of fileContribMap) {
-      result.set(filePath, Object.values(contribs).sort((a, b) => b.count - a.count))
+    for (const [fp, contribs] of fileContribMap) {
+      result.set(fp, Object.values(contribs).sort((a, b) => b.count - a.count))
     }
   }
   catch (e) {
@@ -141,8 +166,8 @@ async function batchGetContributors(filePaths: string[], options?: GitLogOptions
  * Batch-fetch changelogs for all files in a single git command.
  * Returns a map of filePath -> Changelog[].
  */
-async function batchGetChangelog(filePaths: string[], maxCount: number): Promise<Map<string, typeof import('../types').Changelog[]>> {
-  const result = new Map<string, any[]>()
+async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxCount: number): Promise<Map<string, Changelog[]>> {
+  const result = new Map<string, Changelog[]>()
   if (!filePaths.length)
     return result
 
@@ -176,14 +201,14 @@ async function batchGetChangelog(filePaths: string[], maxCount: number): Promise
         continue
       }
 
-      const log: any = {
+      const log: Changelog = {
         hash,
         date,
         message,
         refs: '',
         author_name: authorName,
         author_email: authorEmail,
-      }
+      } as Changelog
 
       if (message.includes('chore: release')) {
         log.version = message.split(' ')[2]?.trim()
@@ -191,7 +216,7 @@ async function batchGetChangelog(filePaths: string[], maxCount: number): Promise
 
       const files = lines.slice(1).filter(Boolean)
       for (const file of files) {
-        const absPath = path.resolve(basePath, file)
+        const absPath = path.resolve(resolvedBase, file)
         if (!result.has(absPath))
           result.set(absPath, [])
         result.get(absPath)!.push(log)
@@ -220,13 +245,15 @@ export async function flushGitLogBatch(options: GitLogOptions) {
   const isPrebuilt = strategy === 'prebuilt'
   const isBuildTime = strategy === 'build-time'
 
+  const resolvedBase = await ensureBasePath()
+
   const filePaths = routes.map(r => r.filePath)
   const maxCount = process.env.CI ? 1000 : 100
 
   // 2 git commands for ALL files (instead of 2 × N)
   const [contributorsMap, changelogMap] = await Promise.all([
-    batchGetContributors(filePaths, options),
-    batchGetChangelog(filePaths, maxCount),
+    batchGetContributors(resolvedBase, filePaths, options),
+    batchGetChangelog(resolvedBase, filePaths, maxCount),
   ])
 
   // Write results for prebuilt strategy (single file write)
