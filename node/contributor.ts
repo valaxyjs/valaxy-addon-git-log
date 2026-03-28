@@ -4,7 +4,7 @@ import consola from 'consola'
 import gravatar from 'gravatar'
 import md5 from 'md5'
 import { git } from '.'
-import { guessGitHubUsername } from '../utils'
+import { guessGitHubUsername, parseGithubUrl, resolveGitHubUsers } from '../utils'
 
 /**
  * Create a Contributor object from a name and email.
@@ -12,16 +12,61 @@ import { guessGitHubUsername } from '../utils'
  */
 export function createContributor(name: string, email: string): Contributor {
   const githubUsername = guessGitHubUsername(email)
+  const gravatarUrl = gravatar.url(email)
   return {
     count: 0,
     name,
     email,
     avatar: githubUsername
       ? `https://github.com/${githubUsername}.png`
-      : gravatar.url(email),
+      : gravatarUrl.startsWith('//') ? `https:${gravatarUrl}` : gravatarUrl,
     github: githubUsername ? `https://github.com/${githubUsername}` : null,
     hash: md5(email),
   }
+}
+
+/**
+ * Resolve GitHub usernames for contributors that don't have one yet.
+ * Uses the GitHub API to look up emails from the repository's commit history.
+ *
+ * **Note:** This function mutates the `contributors` array items in-place,
+ * updating their `github` and `avatar` fields when a match is found.
+ */
+export async function resolveContributorsGitHub(
+  contributors: Contributor[],
+  repositoryUrl?: string,
+): Promise<Contributor[]> {
+  if (!repositoryUrl)
+    return contributors
+
+  const unresolved = contributors.filter(c => !c.github)
+  if (!unresolved.length)
+    return contributors
+
+  let owner: string
+  let repo: string
+  try {
+    ({ owner, repo } = parseGithubUrl(repositoryUrl))
+  }
+  catch {
+    return contributors
+  }
+
+  const emailsToResolve = unresolved.map(c => c.email)
+  const emailToLogin = await resolveGitHubUsers(owner, repo, emailsToResolve)
+
+  for (const contributor of contributors) {
+    if (contributor.github)
+      continue
+
+    const login = emailToLogin.get(contributor.email)
+    if (login) {
+      contributor.github = `https://github.com/${login}`
+      contributor.avatar = `https://github.com/${login}.png`
+    }
+  }
+
+  return contributors
 }
 
 /**

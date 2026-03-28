@@ -20,7 +20,7 @@ export async function fetchContributors(owner: string, repo: string, path: strin
         return
 
       const github = author?.login ? `https://github.com/${author?.login}` : null
-      const avatar = author?.avatar_url || gravatar.url(email, { d: 'wavatar' })
+      const avatar = author?.avatar_url || `https:${gravatar.url(email, { d: 'wavatar' })}`
       const hash = md5(email)
 
       if (contributorMap[name])

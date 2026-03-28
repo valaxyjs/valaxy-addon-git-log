@@ -21,6 +21,16 @@ export interface GitLogOptions {
      * @example '--no-merges'
      */
     logArgs?: string
+    /**
+     * Whether to resolve GitHub usernames for contributors whose email
+     * is not a GitHub noreply address.
+     *
+     * When enabled and `repositoryUrl` points to a GitHub repo, the addon
+     * will call the GitHub API during build to look up contributor profiles.
+     *
+     * @default true
+     */
+    resolveGitHub?: boolean
   }
 }
 

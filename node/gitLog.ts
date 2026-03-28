@@ -5,7 +5,7 @@ import process from 'node:process'
 import consola from 'consola'
 import fs from 'fs-extra'
 import { git } from '.'
-import { createContributor, deduplicateContributors } from './contributor'
+import { createContributor, deduplicateContributors, resolveContributorsGitHub } from './contributor'
 
 const RE_WHITESPACE = /\s+/
 
@@ -281,6 +281,12 @@ export async function flushGitLogBatch(options: GitLogOptions) {
     batchGetContributors(resolvedBase, filePaths, options),
     batchGetChangelog(resolvedBase, filePaths, maxCount),
   ])
+
+  // Resolve GitHub usernames for contributors without noreply emails
+  if (options.repositoryUrl && options.contributor?.resolveGitHub !== false) {
+    const allContributors = [...new Set([...contributorsMap.values()].flat())]
+    await resolveContributorsGitHub(allContributors, options.repositoryUrl)
+  }
 
   // Write results for prebuilt strategy (single file write)
   let prebuiltData: GitLogFileEntry = {}
