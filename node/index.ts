@@ -4,7 +4,7 @@ import defu from 'defu'
 import Git from 'simple-git'
 import { defineValaxyAddon } from 'valaxy'
 import pkg from '../package.json'
-import { handleGitLogInfo, setBasePath } from './gitLog'
+import { flushGitLogBatch, handleGitLogInfo, setBasePath } from './gitLog'
 
 export const git = Git({
   maxConcurrentProcesses: 200,
@@ -37,8 +37,14 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
         consola.error('valaxy-addon-git-log: Error getting git root directory:', error)
       })
 
+    // Phase 1: collect routes (no git calls, instant)
     valaxy.hook('vue-router:extendRoute', async (route) => {
       await handleGitLogInfo(options || {}, route)
+    })
+
+    // Phase 2: batch-process all collected routes (2 git calls total)
+    valaxy.hook('vue-router:beforeWriteFiles', async () => {
+      await flushGitLogBatch(options || {})
     })
   },
 }))
