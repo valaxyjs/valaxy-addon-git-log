@@ -247,6 +247,7 @@ async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxC
   }
 
   return result
+}
 
 /**
  * Process all pending routes in batch: 2 git commands for ALL files
