@@ -2,9 +2,13 @@
 import { functions } from '@vueuse/metadata'
 import changelog from 'virtual:git-log/changelog'
 import { computed } from 'vue'
+import { useAddonGitLogConfig } from '../client'
 import { renderCommitMessage } from '../utils'
 
 const props = defineProps<{ fn: string }>()
+const gitLogOptions = useAddonGitLogConfig()
+const repositoryUrl = computed(() => gitLogOptions.value.repositoryUrl || '')
+
 const info = computed(() => functions.find(i => i.name === props.fn))
 
 const names = computed(() => [props.fn, ...info.value?.alias || []])
@@ -42,7 +46,7 @@ const commits = computed(() => {
         </div>
         <div>
           <a
-            :href="`https://github.com/vueuse/vueuse/releases/tag/${commit.version}`"
+            :href="`${repositoryUrl}/releases/tag/${commit.version}`"
             target="_blank"
           >
             <code class="!text-primary font-bold">{{ commit.version }}</code>
@@ -53,12 +57,12 @@ const commits = computed(() => {
       <template v-else>
         <octicon-git-commit-16 class="m-auto rotate-90 transform opacity-30" />
         <div>
-          <a :href="`https://github.com/vueuse/vueuse/commit/${commit.hash}`" target="_blank">
+          <a :href="`${repositoryUrl}/commit/${commit.hash}`" target="_blank">
             <code class="!hover:text-primary !text-xs !text-$vp-c-text-2">{{ commit.hash.slice(0, 5) }}</code>
           </a>
           <span text="sm">
             -
-            <span v-html="renderCommitMessage(commit.message.replace(`(${fn})`, ''))" />
+            <span v-html="renderCommitMessage(commit.message.replace(`(${fn})`, ''), repositoryUrl)" />
           </span>
         </div>
       </template>

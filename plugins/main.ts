@@ -1,6 +1,5 @@
 import type { Plugin } from 'vite'
-import type { Changelog as ChangelogType } from '../types'
-import type { Contributor } from '../types'
+import type { Changelog as ChangelogType, Contributor } from '../types'
 import process from 'node:process'
 import { getChangelog } from '../node/changeLog'
 import { getContributors } from '../node/contributor'
