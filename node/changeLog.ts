@@ -4,6 +4,9 @@ import { git } from '.'
 
 let cache: Changelog[] | undefined
 
+const RE_BACKSLASH = /\\/g
+const RE_PACKAGE_PATH = /^packages\/\w+\/(\w+)\/\w+\.ts$/
+
 /**
  * Separator used to split combined git log output into per-commit blocks.
  */
@@ -63,10 +66,10 @@ export async function getChangelog(maxCount = 200, path?: string) {
     }
     else {
       // Changed files are on the remaining non-empty lines
-      const files = lines.slice(1).filter(Boolean).map(f => f.replace(/\\/g, '/'))
+      const files = lines.slice(1).filter(Boolean).map(f => f.replace(RE_BACKSLASH, '/'))
       log.functions = uniq(
         files
-          .map(i => i.match(/^packages\/\w+\/(\w+)\/\w+\.ts$/)?.[1])
+          .map(i => i.match(RE_PACKAGE_PATH)?.[1])
           .filter(Boolean),
       )
     }

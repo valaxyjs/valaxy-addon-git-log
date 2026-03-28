@@ -1,7 +1,8 @@
 {
   "name": "valaxy-addon-git-log",
+  "type": "module",
   "version": "0.3.4",
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@10.33.0",
   "description": "Integrates git logs into your page of Valaxy site.",
   "repository": "https://github.com/valaxyjs/valaxy-addon-git-log",
   "keywords": [
@@ -13,23 +14,32 @@
   "main": "index.ts",
   "types": "index.d.ts",
   "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "typecheck": "vue-tsc --noEmit",
     "release": "bumpp"
   },
   "peerDependencies": {
     "valaxy": ">=0.22"
   },
   "dependencies": {
-    "@octokit/rest": "^21.0.2",
-    "fs-extra": "^11.3.0",
+    "@octokit/rest": "^22.0.1",
+    "fs-extra": "^11.3.4",
     "gravatar": "^1.8.2",
     "md5": "^2.3.0",
-    "simple-git": "^3.27.0"
+    "simple-git": "^3.33.0"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^7.7.3",
     "@types/fs-extra": "^11.0.4",
     "@types/gravatar": "^1.8.6",
-    "@types/md5": "^2.3.5",
-    "bumpp": "^10.1.0",
-    "valaxy": "^0.23.0"
+    "@types/md5": "^2.3.6",
+    "bumpp": "^11.0.1",
+    "eslint": "^10.1.0",
+    "typescript": "^5.9.3",
+    "valaxy": "^0.28.1",
+    "vitest": "^4.1.2",
+    "vue-tsc": "^3.2.6"
   }
 }

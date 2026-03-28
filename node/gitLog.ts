@@ -1,13 +1,23 @@
-import type { EditableTreeNode } from 'unplugin-vue-router'
+import type { EditableTreeNode } from 'vue-router/unplugin'
 import type { Changelog, Contributor, GitLogFileEntry, GitLogOptions } from '../types'
 import path from 'node:path'
 import process from 'node:process'
 import consola from 'consola'
+import fs from 'fs-extra'
 import gravatar from 'gravatar'
 import md5 from 'md5'
-import fs from 'fs-extra'
 import { git } from '.'
 import { guessGitHubUsername } from '../utils'
+
+const RE_WHITESPACE = /\s+/
+
+interface FrontmatterWithGitLog {
+  git_log: Record<string, any>
+}
+
+function getFrontmatter(route: EditableTreeNode): FrontmatterWithGitLog {
+  return route.meta.frontmatter as FrontmatterWithGitLog
+}
 
 export const destDir = path.resolve(process.cwd(), './public')
 // Only allow files from the user's working directory 'pages' folder
@@ -73,8 +83,9 @@ export async function handleGitLogInfo(options: GitLogOptions, route: EditableTr
   if (!filePath)
     return
 
-  if (!route.meta.frontmatter.git_log)
-    route.meta.frontmatter.git_log = {}
+  const frontmatter = getFrontmatter(route)
+  if (!frontmatter.git_log)
+    frontmatter.git_log = {}
 
   // Ensure basePath is available before computing relative path
   let resolvedBase: string
@@ -87,7 +98,7 @@ export async function handleGitLogInfo(options: GitLogOptions, route: EditableTr
   }
 
   const gitRelativePath = path.relative(resolvedBase, filePath).split(path.sep).join('/')
-  route.meta.frontmatter.git_log.path = gitRelativePath
+  frontmatter.git_log.path = gitRelativePath
 
   if (!isPrebuilt && !isBuildTime)
     return
@@ -115,7 +126,7 @@ async function batchGetContributors(resolvedBase: string, filePaths: string[], o
       '--no-merges',
       '--pretty=format:---COMMIT_SEP---%an|%ae',
       '--name-only',
-      ...(contributor?.logArgs ? contributor.logArgs.trim().split(/\s+/) : []),
+      ...(contributor?.logArgs?.trim() ? contributor.logArgs.trim().split(RE_WHITESPACE) : []),
       '--',
       ...filePaths,
     ]
@@ -301,8 +312,9 @@ export async function flushGitLogBatch(options: GitLogOptions) {
     const changeLog = changelogMap.get(filePath) || []
 
     if (isBuildTime) {
-      route.meta.frontmatter.git_log.contributors = contributors
-      route.meta.frontmatter.git_log.changeLog = changeLog
+      const frontmatter = getFrontmatter(route)
+      frontmatter.git_log.contributors = contributors
+      frontmatter.git_log.changeLog = changeLog
     }
 
     if (isPrebuilt) {

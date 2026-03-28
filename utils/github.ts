@@ -1,6 +1,9 @@
+// eslint-disable-next-line regexp/no-super-linear-backtracking
+const RE_GITHUB_URL = /github\.com[/:](.+?)\/(.+?)(\.git)?$/
+const RE_GITHUB_NOREPLY = /^(\d+\+)?([^@]+)@users\.noreply\.github\.com$/
+
 export function parseGithubUrl(url: string) {
-  // eslint-disable-next-line regexp/no-super-linear-backtracking
-  const match = url.match(/github\.com[/:](.+?)\/(.+?)(\.git)?$/)
+  const match = url.match(RE_GITHUB_URL)
 
   if (!match)
     throw new Error('valaxy-addon-git-log: Invalid GitHub URL')
@@ -12,6 +15,6 @@ export function parseGithubUrl(url: string) {
 }
 
 export function guessGitHubUsername(email: string): string | null {
-  const match = email.match(/^(\d+\+)?([^@]+)@users\.noreply\.github\.com$/)
+  const match = email.match(RE_GITHUB_NOREPLY)
   return match ? match[2] : null
 }

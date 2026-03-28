@@ -1,5 +1,5 @@
 import type { Contributor, GitLogOptions } from '../types'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import gravatar from 'gravatar'
 import md5 from 'md5'
 import { git } from '.'
@@ -9,7 +9,7 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
   const { contributor } = options || {}
 
   try {
-    const gitArgs: string[] = ['log', '--no-merges', '--pretty=format:"%an|%ae"']
+    const gitArgs: string[] = ['log', '--no-merges', '--pretty=format:%an|%ae']
 
     const additionalArgs: string[] = [
       filePath && `--`,
@@ -21,7 +21,7 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
 
     const contributorsMap = gitLog
       .split('\n')
-      .map(line => line.slice(1, -1).split('|') as [string, string])
+      .map(line => line.split('|') as [string, string])
       .filter(([_, email]) => email)
       .reduce((acc, [name, email]) => {
         if (!acc[email]) {
@@ -50,6 +50,6 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
 }
 
 export function getLastUpdated(filePath: string) {
-  const lastUpdated = execSync(`git log -1 --format=%ct ${filePath}`, { encoding: 'utf-8' })
+  const lastUpdated = execFileSync('git', ['log', '-1', '--format=%ct', '--', filePath], { encoding: 'utf-8' })
   return Number.parseInt(lastUpdated, 10) * 1000
 }

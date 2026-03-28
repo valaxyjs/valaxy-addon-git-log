@@ -161,7 +161,9 @@ export interface Contributor {
   count: number
   github: string | null
   hash: string
-}[]
+}
+
+// type: Contributor[]
 ```
 
 | Name   | Type             | Description                                                        |
@@ -194,7 +196,9 @@ export interface Changelog {
   body?: string
   author_name: string
   author_email: string
-}[]
+}
+
+// type: Changelog[]
 ```
 
 | Name           | Type                    | Description                                                             |
