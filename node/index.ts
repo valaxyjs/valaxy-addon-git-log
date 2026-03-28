@@ -29,9 +29,8 @@ export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({
       consola.warn('valaxy-addon-git-log: contributor.mode is deprecated. Please use contributor.strategy instead.')
 
     // Start resolving basePath early; callers use ensureBasePath() to await it
-    initBasePath().catch((error) => {
-      consola.error('valaxy-addon-git-log: Error getting git root directory:', error)
-    })
+    // Start resolving basePath early; ensureBasePath() handles failures internally
+    initBasePath()
 
     // Phase 1: collect routes (no git calls, instant)
     valaxy.hook('vue-router:extendRoute', async (route) => {
