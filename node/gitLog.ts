@@ -11,7 +11,7 @@ import { guessGitHubUsername } from '../utils'
 
 export const destDir = path.resolve(process.cwd(), './public')
 // Only allow files from the user's working directory 'pages' folder
-export const currentWorkingDirectory = `${process.cwd()}/pages`
+export const currentWorkingDirectory = path.join(process.cwd(), 'pages')
 
 /**
  * basePath is resolved asynchronously via `git revparse`. Store the promise
@@ -75,7 +75,7 @@ export async function handleGitLogInfo(options: GitLogOptions, route: EditableTr
   // Ensure basePath is available before computing relative path
   const resolvedBase = await ensureBasePath()
 
-  const gitRelativePath = filePath.replace(resolvedBase, '').substring(1)
+  const gitRelativePath = path.relative(resolvedBase, filePath).split(path.sep).join('/')
   route.meta.frontmatter.git_log.path = gitRelativePath
 
   if (!isPrebuilt && !isBuildTime)
@@ -104,7 +104,7 @@ async function batchGetContributors(resolvedBase: string, filePaths: string[], o
       '--no-merges',
       '--pretty=format:---COMMIT_SEP---%an|%ae',
       '--name-only',
-      ...(contributor?.logArgs ? [contributor.logArgs] : []),
+      ...(contributor?.logArgs ? contributor.logArgs.trim().split(/\s+/) : []),
       '--',
       ...filePaths,
     ]
@@ -290,7 +290,12 @@ export async function flushGitLogBatch(options: GitLogOptions) {
 
   if (isPrebuilt && destDir) {
     const gitLogPath = path.join(destDir, 'git-log.json')
-    await fs.mkdir(path.dirname(gitLogPath), { recursive: true })
-    await fs.writeFile(gitLogPath, JSON.stringify(prebuiltData, null, 2), 'utf-8')
+    try {
+      await fs.mkdir(path.dirname(gitLogPath), { recursive: true })
+      await fs.writeFile(gitLogPath, JSON.stringify(prebuiltData, null, 2), 'utf-8')
+    }
+    catch (error) {
+      consola.error('valaxy-addon-git-log: Error writing git log file at', gitLogPath, error)
+    }
   }
 }
