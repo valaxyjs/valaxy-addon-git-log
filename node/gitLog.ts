@@ -4,10 +4,8 @@ import path from 'node:path'
 import process from 'node:process'
 import consola from 'consola'
 import fs from 'fs-extra'
-import gravatar from 'gravatar'
-import md5 from 'md5'
 import { git } from '.'
-import { guessGitHubUsername } from '../utils'
+import { createContributor, deduplicateContributors } from './contributor'
 
 const RE_WHITESPACE = /\s+/
 
@@ -157,24 +155,15 @@ async function batchGetContributors(resolvedBase: string, filePaths: string[], o
 
         const contribs = fileContribMap.get(absPath)!
         if (!contribs[email]) {
-          const githubUsername = guessGitHubUsername(email)
-          contribs[email] = {
-            count: 0,
-            name,
-            email,
-            avatar: githubUsername
-              ? `https://github.com/${githubUsername}.png`
-              : gravatar.url(email),
-            github: githubUsername ? `https://github.com/${githubUsername}` : null,
-            hash: md5(email),
-          }
+          contribs[email] = createContributor(name, email)
         }
         contribs[email].count++
       }
     }
 
     for (const [fp, contribs] of fileContribMap) {
-      result.set(fp, Object.values(contribs).sort((a, b) => b.count - a.count))
+      const entries = Object.values(contribs)
+      result.set(fp, deduplicateContributors(entries).sort((a, b) => b.count - a.count))
     }
   }
   catch (e) {
