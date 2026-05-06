@@ -19,7 +19,7 @@ const RE_PACKAGE_PATH = /^packages\/\w+\/(\w+)\/\w+\.ts$/
 const COMMIT_SEP = '---COMMIT_SEP---'
 
 export async function getChangelog(maxCount = 200, path?: string, options?: GitLogOptions) {
-  // Only use cache in CI/production — in dev mode always fetch fresh data
+  // Only use cache when CI env var is set (CI builds call this multiple times for the virtual module)
   if (cache && process.env.CI)
     return cache
 
@@ -64,10 +64,11 @@ export async function getChangelog(maxCount = 200, path?: string, options?: GitL
     else {
       // Changed files are on the remaining non-empty lines
       const files = lines.slice(1).filter(Boolean).map(f => f.replace(RE_BACKSLASH, '/'))
-      log.functions = files
-        .map(i => i.match(RE_PACKAGE_PATH)?.[1])
-        .filter((v): v is string => Boolean(v))
-        .filter((v, i, arr) => arr.indexOf(v) === i)
+      log.functions = [...new Set(
+        files
+          .map(i => i.match(RE_PACKAGE_PATH)?.[1])
+          .filter((v): v is string => Boolean(v)),
+      )]
     }
 
     logs.push(log)

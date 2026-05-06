@@ -13,9 +13,9 @@ const RE_NEWLINE = /\n$/gm
 
 /**
  * Protocols allowed in markdown links and images.
- * Blocks `javascript:`, `data:`, `vbscript:`, etc.
+ * Blocks `javascript:`, `data:`, `vbscript:`, protocol-relative `//` URLs, etc.
  */
-const SAFE_URL_RE = /^(?:https?:\/\/|\/|#|mailto:)/i
+const SAFE_URL_RE = /^(?:https?:\/\/|\/(?!\/)|#|mailto:)/i
 
 /**
  * Escape HTML special characters to prevent XSS attacks.

@@ -16,8 +16,13 @@ function getGitLogData(): Promise<GitLogFileEntry> {
     return Promise.resolve(cachedData)
   if (!fetchPromise) {
     const base = import.meta.env.BASE_URL || '/'
-    fetchPromise = fetch(`${base}git-log.json`)
-      .then(res => res.json())
+    const url = `${base}git-log.json`
+    fetchPromise = fetch(url)
+      .then((res) => {
+        if (!res.ok)
+          throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`)
+        return res.json()
+      })
       .then((data: GitLogFileEntry) => {
         cachedData = data
         return data
