@@ -65,9 +65,18 @@ export function renderMarkdown(markdownText = '') {
 
 const RE_ISSUE = /#(\d+)/g
 
+/**
+ * Match text that is NOT inside an HTML tag (between > and <, or at start/end).
+ * Used to avoid replacing #123 inside existing <a href="..."> attributes.
+ */
+const RE_TEXT_OUTSIDE_TAGS = /(?:^|>)([^<]*)(?:<|$)/g
+
 export function renderCommitMessage(msg: string, repo: string) {
   const html = renderMarkdown(msg)
   if (!repo)
     return html
-  return html.replace(RE_ISSUE, `<a href='${repo}/issues/$1'>#$1</a>`)
+  // Only replace #issue references in text content, not inside HTML tags
+  return html.replace(RE_TEXT_OUTSIDE_TAGS, (match) => {
+    return match.replace(RE_ISSUE, `<a href='${repo}/issues/$1'>#$1</a>`)
+  })
 }

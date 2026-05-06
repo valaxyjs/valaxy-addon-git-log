@@ -38,10 +38,11 @@ export async function fetchContributors(owner: string, repo: string, path: strin
       const avatar = author?.avatar_url || `https:${gravatar.url(email, { d: 'wavatar' })}`
       const hash = md5(email)
 
-      if (contributorMap[name])
-        contributorMap[name].count += 1
+      // Use email as key to avoid merging distinct contributors with the same name
+      if (contributorMap[email])
+        contributorMap[email].count += 1
       else
-        contributorMap[name] = { count: 1, name, email, avatar, hash, github }
+        contributorMap[email] = { count: 1, name, email, avatar, hash, github }
     }
 
     contributors = Object.values(contributorMap)

@@ -88,6 +88,23 @@ export interface GitLogFileEntry {
 }
 
 /**
+ * Regex matching conventional commit breaking change marker in the header.
+ * Matches: `type!:`, `type(scope)!:` patterns.
+ */
+const RE_BREAKING = /^\w+(?:\([^)]*\))?!:/
+
+/**
+ * Regex for matching conventional commit type token.
+ * Matches: `type:`, `type(scope):`, `type!:`, `type(scope)!:`
+ */
+function matchesType(message: string, type: string): boolean {
+  // Match `type:`, `type(`, or `type!:` — not just prefix
+  return message.startsWith(`${type}:`)
+    || message.startsWith(`${type}(`)
+    || message.startsWith(`${type}!`)
+}
+
+/**
  * Shared filter for deciding which commits to include in changelog output.
  */
 export function shouldIncludeCommit(message: string, options?: GitLogOptions['changelog']): boolean {
@@ -96,7 +113,7 @@ export function shouldIncludeCommit(message: string, options?: GitLogOptions['ch
 
   if (message.includes('chore: release'))
     return true
-  if (includeBreaking && message.includes('!'))
+  if (includeBreaking && RE_BREAKING.test(message))
     return true
-  return types.some(type => message.startsWith(type))
+  return types.some(type => matchesType(message, type))
 }
