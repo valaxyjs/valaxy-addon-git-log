@@ -24,7 +24,8 @@ export function useGitLog(): Ref<GitLog> {
   const path = frontmatter.value.git_log?.path
 
   if (isPrebuilt && path) {
-    fetch('/git-log.json')
+    const base = import.meta.env.BASE_URL || '/'
+    fetch(`${base}git-log.json`)
       .then(res => res.json())
       .then((data: GitLogFileEntry) => {
         if (data[path])
