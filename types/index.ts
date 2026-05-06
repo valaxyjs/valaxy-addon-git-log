@@ -61,8 +61,15 @@ export interface Contributor {
 export interface Changelog {
   hash: string
   date: string
+  /** Commit subject line (first line of commit message) */
   message: string
   refs?: string
+  /**
+   * Commit body (lines after the subject).
+   * @deprecated Not reliably populated — git body can contain newlines that
+   * conflict with `--name-only` output parsing. Use `message` for display.
+   * Kept for backward compatibility; may be removed in a future major version.
+   */
   body?: string
   author_name: string
   author_email: string

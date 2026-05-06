@@ -12,6 +12,12 @@ const RE_CODE = /`(.*?)`/g
 const RE_NEWLINE = /\n$/gm
 
 /**
+ * Protocols allowed in markdown links and images.
+ * Blocks `javascript:`, `data:`, `vbscript:`, etc.
+ */
+const SAFE_URL_RE = /^(?:https?:\/\/|\/|#|mailto:)/i
+
+/**
  * Escape HTML special characters to prevent XSS attacks.
  * Only escapes characters that can open HTML tags or attributes.
  * `>` is intentionally preserved so that markdown blockquote syntax still works.
@@ -24,6 +30,17 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;')
 }
 
+/**
+ * Sanitize a URL: only allow safe protocols.
+ * Returns empty string for dangerous URLs like `javascript:`, `data:`, etc.
+ */
+function sanitizeUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed)
+    return ''
+  return SAFE_URL_RE.test(trimmed) ? trimmed : ''
+}
+
 export function renderMarkdown(markdownText = '') {
   const htmlText = escapeHtml(markdownText)
     .replace(RE_H3, '<h3>$1</h3>')
@@ -32,8 +49,14 @@ export function renderMarkdown(markdownText = '') {
     .replace(RE_BLOCKQUOTE, '<blockquote>$1</blockquote>')
     .replace(RE_BOLD, '<b>$1</b>')
     .replace(RE_ITALIC, '<i>$1</i>')
-    .replace(RE_IMG, '<img alt=\'$1\' src=\'$2\' />')
-    .replace(RE_LINK, '<a href=\'$2\'>$1</a>')
+    .replace(RE_IMG, (_, alt, src) => {
+      const safeSrc = sanitizeUrl(src)
+      return safeSrc ? `<img alt='${alt}' src='${safeSrc}' />` : alt
+    })
+    .replace(RE_LINK, (_, text, href) => {
+      const safeHref = sanitizeUrl(href)
+      return safeHref ? `<a href='${safeHref}'>${text}</a>` : text
+    })
     .replace(RE_CODE, '<code>$1</code>')
     .replace(RE_NEWLINE, '<br />')
 
