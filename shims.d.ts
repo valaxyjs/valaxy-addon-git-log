@@ -6,8 +6,8 @@ declare module 'virtual:git-log/contributors' {
 }
 
 declare module 'virtual:git-log/changelog' {
-  import type { CommitInfo } from '@vueuse/metadata'
+  import type { Changelog } from 'valaxy-addon-git-log'
 
-  const changelog: CommitInfo[]
+  const changelog: Changelog[]
   export default changelog
 }

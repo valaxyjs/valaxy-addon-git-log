@@ -1,26 +1,18 @@
 <script setup lang="ts">
-import { functions } from '@vueuse/metadata'
-import changelog from 'virtual:git-log/changelog'
+import type { Changelog } from '../types'
 import { computed } from 'vue'
-import { useAddonGitLogConfig } from '../client'
+import { useAddonGitLogConfig, useChangelog } from '../client'
 import { renderCommitMessage } from '../utils'
 
-const props = defineProps<{ fn: string }>()
+const props = defineProps<{
+  changelog?: Changelog[]
+}>()
+
 const gitLogOptions = useAddonGitLogConfig()
 const repositoryUrl = computed(() => gitLogOptions.value.repositoryUrl || '')
+const gitLogChangelog = useChangelog()
 
-const info = computed(() => functions.find(i => i.name === props.fn))
-
-const names = computed(() => [props.fn, ...info.value?.alias || []])
-const commits = computed(() => {
-  const related = changelog
-    .filter(c => c.version || c.functions?.some(i => names.value.includes(i)))
-  return related.filter((i, idx) => {
-    if (i.version && (!related[idx + 1] || related[idx + 1]?.version))
-      return false
-    return true
-  })
-})
+const commits = computed(() => props.changelog || gitLogChangelog.value)
 </script>
 
 <template>
@@ -62,7 +54,7 @@ const commits = computed(() => {
           </a>
           <span text="sm">
             -
-            <span v-html="renderCommitMessage(commit.message.replace(`(${fn})`, ''), repositoryUrl)" />
+            <span v-html="renderCommitMessage(commit.message, repositoryUrl)" />
           </span>
         </div>
       </template>

@@ -7,7 +7,7 @@ import pkg from '../package.json'
 import { flushGitLogBatch, handleGitLogInfo, initBasePath } from './gitLog'
 
 export const git = Git({
-  maxConcurrentProcesses: 200,
+  maxConcurrentProcesses: 10,
 })
 
 export const addonGitLog = defineValaxyAddon<GitLogOptions>(options => ({

@@ -40,6 +40,8 @@ vi.mock('md5', () => ({
   default: (str: string) => `md5-${str}`,
 }))
 
+const FIELD_SEP = '\x1F'
+
 describe('gitLog batch parsing', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -53,13 +55,13 @@ describe('gitLog batch parsing', () => {
     const { git } = await import('../../node/index')
     const rawMock = vi.mocked(git.raw)
 
-    // Simulate contributor git log output
+    // Simulate contributor git log output using \x1f separator
     const contributorOutput = [
-      '---COMMIT_SEP---Alice|alice@example.com',
+      `---COMMIT_SEP---Alice${FIELD_SEP}alice@example.com`,
       'pages/index.md',
-      '---COMMIT_SEP---Bob|bob@example.com',
+      `---COMMIT_SEP---Bob${FIELD_SEP}bob@example.com`,
       'pages/index.md',
-      '---COMMIT_SEP---Alice|alice@example.com',
+      `---COMMIT_SEP---Alice${FIELD_SEP}alice@example.com`,
       'pages/about.md',
     ].join('\n')
 
@@ -88,6 +90,40 @@ describe('gitLog batch parsing', () => {
     )
 
     // Verify frontmatter was set with path
+    const fm = mockRoute.meta.frontmatter as any
+    expect(fm.git_log).toBeDefined()
+    expect(fm.git_log.path).toBe('pages/index.md')
+  })
+
+  it('should parse contributor names containing pipe characters', async () => {
+    const { git } = await import('../../node/index')
+    const rawMock = vi.mocked(git.raw)
+
+    // Author name containing | should NOT break parsing with \x1f separator
+    const contributorOutput = [
+      `---COMMIT_SEP---Alice|Bob${FIELD_SEP}alice@example.com`,
+      'pages/index.md',
+    ].join('\n')
+
+    const changelogOutput = ''
+
+    rawMock
+      .mockResolvedValueOnce(contributorOutput)
+      .mockResolvedValueOnce(changelogOutput)
+
+    const gitLogModule = await import('../../node/gitLog')
+    gitLogModule.setBasePath('/test/repo')
+
+    const mockRoute = {
+      components: new Map([['default', '/test/repo/pages/index.md']]),
+      meta: { frontmatter: {} },
+    }
+
+    await gitLogModule.handleGitLogInfo(
+      { contributor: { strategy: 'build-time' } },
+      mockRoute as any,
+    )
+
     const fm = mockRoute.meta.frontmatter as any
     expect(fm.git_log).toBeDefined()
     expect(fm.git_log.path).toBe('pages/index.md')
@@ -158,5 +194,49 @@ describe('path utilities', () => {
     const { setBasePath, getBasePath } = await import('../../node/gitLog')
     setBasePath('/custom/path')
     expect(getBasePath()).toBe('/custom/path')
+  })
+})
+
+describe('shouldIncludeCommit', () => {
+  it('should include feat commits by default', async () => {
+    const { shouldIncludeCommit } = await import('../../types')
+    expect(shouldIncludeCommit('feat: add new feature')).toBe(true)
+    expect(shouldIncludeCommit('feat(scope): something')).toBe(true)
+  })
+
+  it('should include fix commits by default', async () => {
+    const { shouldIncludeCommit } = await import('../../types')
+    expect(shouldIncludeCommit('fix: resolve issue')).toBe(true)
+  })
+
+  it('should include breaking changes by default', async () => {
+    const { shouldIncludeCommit } = await import('../../types')
+    expect(shouldIncludeCommit('refactor!: breaking change')).toBe(true)
+  })
+
+  it('should include chore: release', async () => {
+    const { shouldIncludeCommit } = await import('../../types')
+    expect(shouldIncludeCommit('chore: release v1.0.0')).toBe(true)
+  })
+
+  it('should exclude unmatched commits', async () => {
+    const { shouldIncludeCommit } = await import('../../types')
+    expect(shouldIncludeCommit('chore: update deps')).toBe(false)
+    expect(shouldIncludeCommit('docs: update readme')).toBe(false)
+    expect(shouldIncludeCommit('style: formatting')).toBe(false)
+  })
+
+  it('should respect custom includeTypes', async () => {
+    const { shouldIncludeCommit } = await import('../../types')
+    const options = { includeTypes: ['feat', 'fix', 'docs', 'perf'] }
+    expect(shouldIncludeCommit('docs: update readme', options)).toBe(true)
+    expect(shouldIncludeCommit('perf: optimize query', options)).toBe(true)
+    expect(shouldIncludeCommit('style: formatting', options)).toBe(false)
+  })
+
+  it('should respect includeBreaking: false', async () => {
+    const { shouldIncludeCommit } = await import('../../types')
+    const options = { includeBreaking: false }
+    expect(shouldIncludeCommit('refactor!: breaking', options)).toBe(false)
   })
 })

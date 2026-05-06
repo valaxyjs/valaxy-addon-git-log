@@ -1,5 +1,3 @@
-import type { CommitInfo, ContributorInfo } from '@vueuse/metadata'
-
 export interface GitLogOptions {
   repositoryUrl?: string
   contributor?: {
@@ -32,18 +30,44 @@ export interface GitLogOptions {
      */
     resolveGitHub?: boolean
   }
+  changelog?: {
+    /**
+     * Commit types to include in changelog.
+     * @default ['feat', 'fix']
+     */
+    includeTypes?: string[]
+    /**
+     * Whether to include commits with '!' (breaking changes).
+     * @default true
+     */
+    includeBreaking?: boolean
+    /**
+     * Max number of commits to fetch per file.
+     * @default 100 (1000 in CI)
+     */
+    maxCount?: number
+  }
 }
 
-export interface Contributor extends ContributorInfo {
+export interface Contributor {
   name: string
   email: string
   avatar: string
   count: number
   github: string | null
+  hash: string
 }
 
-export interface Changelog extends CommitInfo {
-
+export interface Changelog {
+  hash: string
+  date: string
+  message: string
+  refs?: string
+  body?: string
+  author_name: string
+  author_email: string
+  version?: string
+  functions?: string[]
 }
 
 export interface GitLog {
@@ -54,4 +78,18 @@ export interface GitLog {
 
 export interface GitLogFileEntry {
   [path: string]: GitLog
+}
+
+/**
+ * Shared filter for deciding which commits to include in changelog output.
+ */
+export function shouldIncludeCommit(message: string, options?: GitLogOptions['changelog']): boolean {
+  const types = options?.includeTypes ?? ['feat', 'fix']
+  const includeBreaking = options?.includeBreaking ?? true
+
+  if (message.includes('chore: release'))
+    return true
+  if (includeBreaking && message.includes('!'))
+    return true
+  return types.some(type => message.startsWith(type))
 }

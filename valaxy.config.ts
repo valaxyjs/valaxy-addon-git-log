@@ -1,7 +1,7 @@
-import { defineTheme } from 'valaxy'
+import { defineValaxyConfig } from 'valaxy'
 import { GitLogVitePlugins } from './plugins/main'
 
-export default defineTheme({
+export default defineValaxyConfig({
   vite: {
     plugins: [
       ...GitLogVitePlugins,

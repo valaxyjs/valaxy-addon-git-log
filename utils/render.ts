@@ -11,8 +11,21 @@ const RE_LINK = /\[(.*?)\]\((.*?)\)/g
 const RE_CODE = /`(.*?)`/g
 const RE_NEWLINE = /\n$/gm
 
+/**
+ * Escape HTML special characters to prevent XSS attacks.
+ * Only escapes characters that can open HTML tags or attributes.
+ * `>` is intentionally preserved so that markdown blockquote syntax still works.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export function renderMarkdown(markdownText = '') {
-  const htmlText = markdownText
+  const htmlText = escapeHtml(markdownText)
     .replace(RE_H3, '<h3>$1</h3>')
     .replace(RE_H2, '<h2>$1</h2>')
     .replace(RE_H1, '<h1>$1</h1>')
@@ -33,5 +46,5 @@ export function renderCommitMessage(msg: string, repo: string) {
   const html = renderMarkdown(msg)
   if (!repo)
     return html
-  return html.replace(RE_ISSUE, `<a href=\'${repo}/issues/$1\'>#$1</a>`)
+  return html.replace(RE_ISSUE, `<a href='${repo}/issues/$1'>#$1</a>`)
 }

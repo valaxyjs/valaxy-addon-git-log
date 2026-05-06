@@ -1,6 +1,12 @@
-import type { Changelog } from '../types'
-import { uniq } from '@vueuse/metadata'
+import type { Changelog, GitLogOptions } from '../types'
+import process from 'node:process'
 import { git } from '.'
+import { shouldIncludeCommit } from '../types'
+
+/**
+ * ASCII Unit Separator — used as field delimiter in git pretty formats.
+ */
+const FIELD_SEP = '\x1F'
 
 let cache: Changelog[] | undefined
 
@@ -12,18 +18,17 @@ const RE_PACKAGE_PATH = /^packages\/\w+\/(\w+)\/\w+\.ts$/
  */
 const COMMIT_SEP = '---COMMIT_SEP---'
 
-export async function getChangelog(maxCount = 200, path?: string) {
-  if (cache)
+export async function getChangelog(maxCount = 200, path?: string, options?: GitLogOptions) {
+  // Only use cache in CI/production — in dev mode always fetch fresh data
+  if (cache && process.env.CI)
     return cache
 
   // Fetch commits together with their changed files in a single git call.
-  // This replaces the previous N+1 pattern (1 `git log` + N `git diff-tree`)
-  // that spawned ~100 sub-processes and took ~6 s.
   const raw = await git.raw([
     'log',
     `--max-count=${maxCount}`,
     '--name-only',
-    `--pretty=format:${COMMIT_SEP}%n%H|%an|%ae|%aI|%s|%b`,
+    `--pretty=format:${COMMIT_SEP}%n%H${FIELD_SEP}%an${FIELD_SEP}%ae${FIELD_SEP}%aI${FIELD_SEP}%s`,
     ...(path ? ['--', path] : []),
   ])
 
@@ -37,20 +42,12 @@ export async function getChangelog(maxCount = 200, path?: string) {
       continue
 
     const headerLine = lines[0]
-    const [hash, authorName, authorEmail, date, ...rest] = headerLine.split('|')
-    const messageParts = rest.join('|')
-    // The pretty format puts subject|body — split on first occurrence
-    const message = messageParts || ''
+    const [hash, authorName, authorEmail, date, ...rest] = headerLine.split(FIELD_SEP)
+    const message = rest.join(FIELD_SEP) || ''
 
-    // Apply the same filter as before
-    if (
-      !message.includes('chore: release')
-      && !message.includes('!')
-      && !message.startsWith('feat')
-      && !message.startsWith('fix')
-    ) {
+    // Apply configurable filter
+    if (!shouldIncludeCommit(message, options?.changelog))
       continue
-    }
 
     const log: Changelog = {
       hash,
@@ -59,7 +56,7 @@ export async function getChangelog(maxCount = 200, path?: string) {
       refs: '',
       author_name: authorName,
       author_email: authorEmail,
-    } as Changelog
+    }
 
     if (message.includes('chore: release')) {
       log.version = message.split(' ')[2]?.trim()
@@ -67,15 +64,15 @@ export async function getChangelog(maxCount = 200, path?: string) {
     else {
       // Changed files are on the remaining non-empty lines
       const files = lines.slice(1).filter(Boolean).map(f => f.replace(RE_BACKSLASH, '/'))
-      log.functions = uniq(
-        files
-          .map(i => i.match(RE_PACKAGE_PATH)?.[1])
-          .filter(Boolean),
-      )
+      log.functions = files
+        .map(i => i.match(RE_PACKAGE_PATH)?.[1])
+        .filter((v): v is string => Boolean(v))
+        .filter((v, i, arr) => arr.indexOf(v) === i)
     }
 
     logs.push(log)
   }
 
-  return cache = logs
+  cache = logs
+  return logs
 }

@@ -11,16 +11,18 @@ export function useChangelog(_path?: MaybeRefOrGetter<string>): Ref<Changelog[]>
   const strategy = gitLogOptions.value.contributor?.strategy
 
   if (strategy === 'runtime') {
-    const contributors = computedAsync<Changelog[]>(
+    const changelog = computedAsync<Changelog[]>(
       async () => {
-        // TODO: Complete the API-based method
+        // Runtime changelog is not yet supported via GitHub API
+        // (GitHub commits endpoint doesn't provide conventional-commit filtering)
+        // Fall back to empty — consumers should prefer 'prebuilt' or 'build-time'
         return []
       },
       gitLog.value.changeLog,
       { lazy: true },
     )
 
-    return contributors
+    return changelog
   }
 
   return computed(() => gitLog.value.changeLog)
