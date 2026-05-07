@@ -55,13 +55,24 @@ describe('gitLog batch parsing', () => {
     const { git } = await import('../../node/index')
     const rawMock = vi.mocked(git.raw)
 
-    // Simulate contributor git log output using \x1f separator
+    // The pages-dir guard in handleGitLogInfo requires the route's filePath
+    // to live under <cwd>/pages, and batchGetContributors resolves the
+    // pretty-format file paths against the git root. Use real cwd so both
+    // gates pass and the absolute paths line up.
+    const cwd = process.cwd()
+    const pagesPath = path.join(cwd, 'pages', 'index.md')
+
+    // Simulate contributor git log output using \x1F separator.
+    // pages/index.md is touched by 2 commits from Alice (count=2) and 1
+    // commit from Bob (count=1). pages/about.md is touched by 1 Alice commit
+    // and is included to verify the per-file grouping doesn't leak across.
     const contributorOutput = [
       `---COMMIT_SEP---Alice${FIELD_SEP}alice@example.com`,
       'pages/index.md',
       `---COMMIT_SEP---Bob${FIELD_SEP}bob@example.com`,
       'pages/index.md',
       `---COMMIT_SEP---Alice${FIELD_SEP}alice@example.com`,
+      'pages/index.md',
       'pages/about.md',
     ].join('\n')
 
@@ -72,34 +83,38 @@ describe('gitLog batch parsing', () => {
       .mockResolvedValueOnce(contributorOutput) // batchGetContributors
       .mockResolvedValueOnce(changelogOutput) // batchGetChangelog
 
-    // Import the module under test
     const gitLogModule = await import('../../node/gitLog')
+    gitLogModule.setBasePath(cwd)
 
-    // Set basePath directly for testing
-    gitLogModule.setBasePath('/test/repo')
-
-    // Create mock route
     const mockRoute = {
-      components: new Map([['default', '/test/repo/pages/index.md']]),
+      components: new Map([['default', pagesPath]]),
       meta: { frontmatter: {} },
     }
 
-    await gitLogModule.handleGitLogInfo(
-      { contributor: { strategy: 'build-time' } },
-      mockRoute as any,
-    )
+    const options = { contributor: { strategy: 'build-time' as const } }
+    await gitLogModule.handleGitLogInfo(options, mockRoute as any)
+    // Parsing actually happens in flushGitLogBatch — without this call the
+    // mocked git.raw output is never consumed.
+    await gitLogModule.flushGitLogBatch(options)
 
-    // Verify frontmatter was set with path
     const fm = mockRoute.meta.frontmatter as any
     expect(fm.git_log).toBeDefined()
     expect(fm.git_log.path).toBe('pages/index.md')
+
+    // Assert contributors were parsed with the \x1F separator and grouped per-file
+    expect(fm.git_log.contributors).toHaveLength(2)
+    expect(fm.git_log.contributors[0]).toMatchObject({ name: 'Alice', email: 'alice@example.com', count: 2 })
+    expect(fm.git_log.contributors[1]).toMatchObject({ name: 'Bob', email: 'bob@example.com', count: 1 })
   })
 
   it('should parse contributor names containing pipe characters', async () => {
     const { git } = await import('../../node/index')
     const rawMock = vi.mocked(git.raw)
 
-    // Author name containing | should NOT break parsing with \x1f separator
+    const cwd = process.cwd()
+    const pagesPath = path.join(cwd, 'pages', 'index.md')
+
+    // Author name containing | should NOT break parsing with \x1F separator
     const contributorOutput = [
       `---COMMIT_SEP---Alice|Bob${FIELD_SEP}alice@example.com`,
       'pages/index.md',
@@ -112,21 +127,26 @@ describe('gitLog batch parsing', () => {
       .mockResolvedValueOnce(changelogOutput)
 
     const gitLogModule = await import('../../node/gitLog')
-    gitLogModule.setBasePath('/test/repo')
+    gitLogModule.setBasePath(cwd)
 
     const mockRoute = {
-      components: new Map([['default', '/test/repo/pages/index.md']]),
+      components: new Map([['default', pagesPath]]),
       meta: { frontmatter: {} },
     }
 
-    await gitLogModule.handleGitLogInfo(
-      { contributor: { strategy: 'build-time' } },
-      mockRoute as any,
-    )
+    const options = { contributor: { strategy: 'build-time' as const } }
+    await gitLogModule.handleGitLogInfo(options, mockRoute as any)
+    await gitLogModule.flushGitLogBatch(options)
 
     const fm = mockRoute.meta.frontmatter as any
-    expect(fm.git_log).toBeDefined()
     expect(fm.git_log.path).toBe('pages/index.md')
+    // Pipe in author name is preserved verbatim — \x1F separator avoids the
+    // collision the old `|` delimiter had.
+    expect(fm.git_log.contributors).toHaveLength(1)
+    expect(fm.git_log.contributors[0]).toMatchObject({
+      name: 'Alice|Bob',
+      email: 'alice@example.com',
+    })
   })
 
   it('should skip routes without default component', async () => {

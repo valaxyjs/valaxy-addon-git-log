@@ -190,12 +190,16 @@ async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxC
     return result
 
   try {
-    // Note: --max-count is omitted because with multiple pathspecs it limits
-    // the *global* commit count, not per-file. We fetch all matching commits
-    // and truncate each file's array to `maxCount` in JS below.
+    // `git log --max-count` with multiple pathspecs limits the *global* commit
+    // count, not per-file. We still need a global cap to keep the command
+    // bounded on large repos — use `maxCount * filePaths.length` as a heuristic
+    // upper bound. Each file's array is then truncated to `maxCount` in JS
+    // below to preserve per-file semantics.
+    const totalCap = Math.max(maxCount, maxCount * filePaths.length)
     const raw = await git.raw([
       'log',
       '--name-only',
+      `--max-count=${totalCap}`,
       `--pretty=format:---CL_SEP---%H${FIELD_SEP}%an${FIELD_SEP}%ae${FIELD_SEP}%aI${FIELD_SEP}%s`,
       '--',
       ...filePaths,
