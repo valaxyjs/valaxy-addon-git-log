@@ -66,16 +66,23 @@ export function renderMarkdown(markdownText = '') {
 const RE_ISSUE = /#(\d+)/g
 
 /**
- * Replace #issue references in HTML text that is NOT inside an <a> element.
- * Splits on anchor tags to avoid producing nested <a> elements.
+ * Replace #issue references in HTML text nodes only.
+ *
+ * Tokenizes the HTML into three kinds of segments:
+ *   1. `<a ...>...</a>` — preserved verbatim (avoids nested anchors)
+ *   2. any other tag (e.g. `<img alt='#1'/>`, `<code>`) — preserved verbatim
+ *      so attributes like `alt` / `src` / `href` are never rewritten
+ *   3. text outside tags — `#123` becomes `<a href='.../issues/123'>#123</a>`
  */
 function replaceIssueRefs(html: string, repo: string): string {
-  // Split by <a ...>...</a> segments, only replace in non-anchor parts
-  return html.replace(/(<a\s[^>]*>[\s\S]*?<\/a>)|([^<]*(?:<(?!a\s|\/a>)[^<]*)*)/gi, (match, anchor) => {
-    if (anchor)
-      return match // preserve anchor tags untouched
-    return match.replace(RE_ISSUE, `<a href='${repo}/issues/$1'>#$1</a>`)
-  })
+  return html.replace(
+    /(<a\s[^>]*>[\s\S]*?<\/a>)|(<[^>]+>)|([^<]+)/gi,
+    (match, _anchor, _tag, text) => {
+      if (text == null)
+        return match // anchor block or single tag — leave untouched
+      return text.replace(RE_ISSUE, `<a href='${repo}/issues/$1'>#$1</a>`)
+    },
+  )
 }
 
 export function renderCommitMessage(msg: string, repo: string) {

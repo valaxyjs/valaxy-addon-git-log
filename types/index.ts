@@ -113,7 +113,11 @@ export function shouldIncludeCommit(message: string, options?: GitLogOptions['ch
 
   if (message.includes('chore: release'))
     return true
-  if (includeBreaking && RE_BREAKING.test(message))
-    return true
+
+  // Breaking commits are gated entirely by `includeBreaking`, even when their
+  // type token is in `includeTypes`. Without this, `feat!:` / `feat(scope)!:`
+  // would still be included via the `types.some(...)` path below.
+  if (RE_BREAKING.test(message))
+    return includeBreaking
   return types.some(type => matchesType(message, type))
 }

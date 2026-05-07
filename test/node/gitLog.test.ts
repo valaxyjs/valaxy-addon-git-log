@@ -237,6 +237,14 @@ describe('shouldIncludeCommit', () => {
   it('should respect includeBreaking: false', async () => {
     const { shouldIncludeCommit } = await import('../../types')
     const options = { includeBreaking: false }
+    // Non-included type with breaking marker
     expect(shouldIncludeCommit('refactor!: breaking', options)).toBe(false)
+    // Included types with breaking marker — must also be excluded
+    expect(shouldIncludeCommit('feat!: breaking feature', options)).toBe(false)
+    expect(shouldIncludeCommit('feat(scope)!: breaking', options)).toBe(false)
+    expect(shouldIncludeCommit('fix!: breaking fix', options)).toBe(false)
+    // Non-breaking commits of included types still pass through
+    expect(shouldIncludeCommit('feat: regular feature', options)).toBe(true)
+    expect(shouldIncludeCommit('fix(scope): bug', options)).toBe(true)
   })
 })
