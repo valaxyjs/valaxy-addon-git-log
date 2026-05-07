@@ -70,21 +70,29 @@ In your project (wether theme or addon), you can write this in `valaxy.config.ts
 export default defineValaxyConfig<ThemeConfig>({
   addons: [
     addonGitLog({
+      repositoryUrl: 'https://github.com/your-username/your-repository.git',
       contributor: {
         strategy: 'prebuilt', // 'prebuilt' | 'build-time' | 'runtime',
         // logArgs: '--first-parent --follow',
+      },
+      changelog: {
+        includeTypes: ['feat', 'fix'],
+        includeBreaking: true,
       },
     }),
   ],
 })
 ```
 
-| Name                   | Type                     | Default      | Description |
-|------------------------|--------------------------|--------------|-------------|
-| repositoryUrl          | `string`                | `undefined`  | GitHub repository URL |
-| contributor.strategy   | `'prebuilt'` \| `'build-time'` \| `'runtime'` | `'prebuilt'` | Data fetching strategy |
-| contributor.logArgs    | `string`                | `''`         | Git log arguments (for 'prebuilt' and 'build-time') |
-| contributor.githubToken| `string`                | `undefined`  | GitHub token (required for 'runtime' strategy) |
+| Name                          | Type                                          | Default       | Description                                                                  |
+| ----------------------------- | --------------------------------------------- | ------------- | ---------------------------------------------------------------------------- |
+| repositoryUrl                 | `string`                                      | `undefined`   | GitHub repository URL                                                        |
+| contributor.strategy          | `'prebuilt'` \| `'build-time'` \| `'runtime'` | `'prebuilt'`  | Data fetching strategy                                                       |
+| contributor.logArgs           | `string`                                      | `''`          | Extra `git log` arguments (for `'prebuilt'` and `'build-time'`)              |
+| contributor.resolveGitHub     | `boolean`                                     | `true`        | Look up GitHub usernames for non-noreply emails (requires `repositoryUrl`)   |
+| changelog.includeTypes        | `string[]`                                    | `['feat', 'fix']` | Conventional-commit types included in the changelog                      |
+| changelog.includeBreaking     | `boolean`                                     | `true`        | Whether to include `type!:` / `type(scope)!:` breaking commits               |
+| changelog.maxCount            | `number`                                      | `100` (`1000` in CI) | Max commits per file pulled from `git log`                            |
 
 ### Strategy Comparison
 
@@ -175,6 +183,32 @@ export interface Contributor {
 | github | `string \| null` | Only supported `api` mode                                          |
 | hash   | `string`         | A unique hash generated based on the contributor's email           |
 
+### useGitLogState
+
+Same data as `useGitLog`, but also exposes loading and error state — useful when rendering UI that depends on the prebuilt `git-log.json` fetch.
+
+```ts
+import { useGitLogState } from 'valaxy-addon-git-log'
+
+const { data, isLoading, error } = useGitLogState()
+```
+
+**Return Type:**
+
+```ts
+{
+  data: Ref<GitLog>
+  isLoading: Ref<boolean>
+  error: Ref<Error | null>
+}
+```
+
+| Name      | Type                | Description                                              |
+| --------- | ------------------- | -------------------------------------------------------- |
+| `data`    | `Ref<GitLog>`       | Same shape as `useGitLog`. Updates once the fetch lands. |
+| `isLoading` | `Ref<boolean>`    | `true` while `git-log.json` is being fetched.            |
+| `error`   | `Ref<Error \| null>` | Set if the fetch / parse fails (e.g. 404, bad JSON).     |
+
 ### useChangelog
 
 ```ts
@@ -187,31 +221,32 @@ const changelog = useChangelog()
 
 ```ts
 export interface Changelog {
-  functions: string[]
-  version?: string
   hash: string
   date: string
   message: string
   refs?: string
+  /** @deprecated never reliably populated; will be removed in a future major */
   body?: string
   author_name: string
   author_email: string
+  version?: string
+  functions?: string[]
 }
 
 // type: Changelog[]
 ```
 
-| Name           | Type                    | Description                                                             |
-| -------------- | ----------------------- | ----------------------------------------------------------------------- |
-| `functions`    | `string[]`              | List of functions affected or related to the changelog entry.           |
-| `version`      | `string` \| `undefined` | Optional version number for the release or update.                      |
-| `hash`         | `string`                | Unique identifier or commit hash for the change.                        |
-| `date`         | `string`                | The date when the change was made or the changelog entry was created.   |
-| `message`      | `string`                | A brief summary or description of the change.                           |
-| `refs`         | `string` \| `undefined` | Optional reference information, such as ticket IDs or PR links.         |
-| `body`         | `string` \| `undefined` | Optional detailed body content or additional explanation of the change. |
-| `author_name`  | `string`                | Name of the person who made the change.                                 |
-| `author_email` | `string`                | Email address of the person who made the change.                        |
+| Name           | Type                    | Description                                                                                 |
+| -------------- | ----------------------- | ------------------------------------------------------------------------------------------- |
+| `hash`         | `string`                | Commit hash.                                                                                |
+| `date`         | `string`                | ISO 8601 author date of the commit.                                                         |
+| `message`      | `string`                | Commit subject (first line).                                                                |
+| `refs`         | `string` \| `undefined` | Reserved for refs metadata; currently always empty.                                         |
+| `body`         | `string` \| `undefined` | **Deprecated** — never reliably populated due to `--name-only` output collisions.           |
+| `author_name`  | `string`                | Name of the commit author.                                                                  |
+| `author_email` | `string`                | Email of the commit author.                                                                 |
+| `version`      | `string` \| `undefined` | Parsed version, only set on `chore: release vX.Y.Z` commits.                                |
+| `functions`    | `string[]` \| `undefined` | Workspace package names extracted from changed file paths (single-file `getChangelog` only). |
 
 ## Other
 
