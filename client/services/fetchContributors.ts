@@ -18,7 +18,7 @@ export async function fetchContributors(owner: string, repo: string, path: strin
     })
 
     if (!res.ok)
-      throw new Error(`GitHub API responded with ${res.status}`)
+      throw new Error(`GitHub API responded with ${res.status} ${res.statusText} (${url})`)
 
     const data: Array<{
       author?: { login?: string, avatar_url?: string, name?: string, email?: string }
