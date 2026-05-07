@@ -5,8 +5,15 @@ import process from 'node:process'
 import consola from 'consola'
 import fs from 'fs-extra'
 import { git } from '.'
+import { shouldIncludeCommit } from '../types'
 import { createContributor, deduplicateContributors, resolveContributorsGitHub } from './contributor'
 
+/**
+ * ASCII Unit Separator — used as field delimiter in git pretty formats.
+ * Unlike `|`, this character never appears in normal text (author names,
+ * emails, commit messages), eliminating parse collisions.
+ */
+const FIELD_SEP = '\x1F'
 const RE_WHITESPACE = /\s+/
 
 interface FrontmatterWithGitLog {
@@ -122,7 +129,7 @@ async function batchGetContributors(resolvedBase: string, filePaths: string[], o
     const gitArgs = [
       'log',
       '--no-merges',
-      '--pretty=format:---COMMIT_SEP---%an|%ae',
+      `--pretty=format:---COMMIT_SEP---%an${FIELD_SEP}%ae`,
       '--name-only',
       ...(contributor?.logArgs?.trim() ? contributor.logArgs.trim().split(RE_WHITESPACE) : []),
       '--',
@@ -131,7 +138,7 @@ async function batchGetContributors(resolvedBase: string, filePaths: string[], o
 
     const raw = await git.raw(gitArgs)
 
-    // Parse: each block is "---COMMIT_SEP---author|email\nfile1\nfile2\n..."
+    // Parse: each block is "---COMMIT_SEP---author\x1femail\nfile1\nfile2\n..."
     const blocks = raw.split('---COMMIT_SEP---').filter(Boolean)
 
     // fileContribMap: filePath -> { email -> Contributor }
@@ -142,7 +149,7 @@ async function batchGetContributors(resolvedBase: string, filePaths: string[], o
       if (!lines.length)
         continue
 
-      const [name, email] = lines[0].split('|')
+      const [name, email] = lines[0].split(FIELD_SEP)
       if (!email)
         continue
 
@@ -177,19 +184,23 @@ async function batchGetContributors(resolvedBase: string, filePaths: string[], o
  * Batch-fetch changelogs for all files in a single git command.
  * Returns a map of filePath -> Changelog[].
  */
-async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxCount: number): Promise<Map<string, Changelog[]>> {
+async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxCount: number, options?: GitLogOptions): Promise<Map<string, Changelog[]>> {
   const result = new Map<string, Changelog[]>()
   if (!filePaths.length)
     return result
 
   try {
-    // Note: --max-count is omitted because with multiple pathspecs it limits
-    // the *global* commit count, not per-file. We fetch all matching commits
-    // and truncate each file's array to `maxCount` in JS below.
+    // `git log --max-count` with multiple pathspecs limits the *global* commit
+    // count, not per-file. We still need a global cap to keep the command
+    // bounded on large repos — use `maxCount * filePaths.length` as a heuristic
+    // upper bound. Each file's array is then truncated to `maxCount` in JS
+    // below to preserve per-file semantics.
+    const totalCap = Math.max(maxCount, maxCount * filePaths.length)
     const raw = await git.raw([
       'log',
       '--name-only',
-      '--pretty=format:---CL_SEP---%H|%an|%ae|%aI|%s|%b',
+      `--max-count=${totalCap}`,
+      `--pretty=format:---CL_SEP---%H${FIELD_SEP}%an${FIELD_SEP}%ae${FIELD_SEP}%aI${FIELD_SEP}%s`,
       '--',
       ...filePaths,
     ])
@@ -202,17 +213,11 @@ async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxC
         continue
 
       const headerLine = lines[0]
-      const [hash, authorName, authorEmail, date, ...rest] = headerLine.split('|')
-      const message = rest.join('|') || ''
+      const [hash, authorName, authorEmail, date, ...rest] = headerLine.split(FIELD_SEP)
+      const message = rest.join(FIELD_SEP) || ''
 
-      if (
-        !message.includes('chore: release')
-        && !message.includes('!')
-        && !message.startsWith('feat')
-        && !message.startsWith('fix')
-      ) {
+      if (!shouldIncludeCommit(message, options?.changelog))
         continue
-      }
 
       const log: Changelog = {
         hash,
@@ -221,7 +226,7 @@ async function batchGetChangelog(resolvedBase: string, filePaths: string[], maxC
         refs: '',
         author_name: authorName,
         author_email: authorEmail,
-      } as Changelog
+      }
 
       if (message.includes('chore: release')) {
         log.version = message.split(' ')[2]?.trim()
@@ -274,12 +279,12 @@ export async function flushGitLogBatch(options: GitLogOptions) {
   }
 
   const filePaths = routes.map(r => r.filePath)
-  const maxCount = process.env.CI ? 1000 : 100
+  const maxCount = options.changelog?.maxCount ?? (process.env.CI ? 1000 : 100)
 
   // 2 git commands for ALL files (instead of 2 × N)
   const [contributorsMap, changelogMap] = await Promise.all([
     batchGetContributors(resolvedBase, filePaths, options),
-    batchGetChangelog(resolvedBase, filePaths, maxCount),
+    batchGetChangelog(resolvedBase, filePaths, maxCount, options),
   ])
 
   // Resolve GitHub usernames for contributors without noreply emails

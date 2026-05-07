@@ -74,33 +74,44 @@ export async function resolveContributorsGitHub(
  * when at least one of them has a recognized GitHub noreply email,
  * so that e.g. "user@gmail.com" and "12345+user@users.noreply.github.com"
  * are merged into a single entry with GitHub avatar & link.
+ *
+ * Uses O(n) grouping by name instead of O(n²) nested loops.
  */
 export function deduplicateContributors(contributors: Contributor[]): Contributor[] {
+  const byName = new Map<string, Contributor[]>()
+
+  for (const c of contributors) {
+    const group = byName.get(c.name)
+    if (group)
+      group.push(c)
+    else
+      byName.set(c.name, [c])
+  }
+
   const merged: Contributor[] = []
-  const consumed = new Set<number>()
 
-  for (let i = 0; i < contributors.length; i++) {
-    if (consumed.has(i))
+  for (const group of byName.values()) {
+    if (group.length === 1) {
+      merged.push(group[0])
       continue
-
-    const base = { ...contributors[i] }
-    for (let j = i + 1; j < contributors.length; j++) {
-      if (consumed.has(j))
-        continue
-
-      const other = contributors[j]
-      // Only merge when names match AND at least one side has GitHub info
-      // (i.e. comes from a noreply email), to avoid false-positive merges
-      if (base.name === other.name && (base.github || other.github)) {
-        base.count += other.count
-        if (!base.github && other.github) {
-          base.github = other.github
-          base.avatar = other.avatar
-        }
-        consumed.add(j)
-      }
     }
 
+    // Only merge when at least one entry has GitHub info
+    const withGithub = group.filter(c => c.github)
+    const withoutGithub = group.filter(c => !c.github)
+
+    if (withGithub.length === 0) {
+      // No github info — keep all separate (different people with same name)
+      merged.push(...group)
+      continue
+    }
+
+    // Merge all into the first github-having entry
+    const base = { ...withGithub[0] }
+    for (let i = 1; i < withGithub.length; i++)
+      base.count += withGithub[i].count
+    for (const c of withoutGithub)
+      base.count += c.count
     merged.push(base)
   }
 
@@ -111,7 +122,7 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
   const { contributor } = options || {}
 
   try {
-    const gitArgs: string[] = ['log', '--no-merges', '--pretty=format:%an|%ae']
+    const gitArgs: string[] = ['log', '--no-merges', '--pretty=format:%an\x1F%ae']
 
     const additionalArgs: string[] = [
       filePath && `--`,
@@ -123,7 +134,7 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
 
     const contributorsMap = gitLog
       .split('\n')
-      .map(line => line.split('|') as [string, string])
+      .map(line => line.split('\x1F') as [string, string])
       .filter(([_, email]) => email)
       .reduce((acc, [name, email]) => {
         if (!acc[email]) {
@@ -142,7 +153,22 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
   }
 }
 
-export function getLastUpdated(filePath: string) {
-  const lastUpdated = execFileSync('git', ['log', '-1', '--format=%ct', '--', filePath], { encoding: 'utf-8' })
-  return Number.parseInt(lastUpdated, 10) * 1000
+/**
+ * Get the last updated timestamp of a file from git history (synchronous).
+ * Kept synchronous for backward compatibility — consumers may call this in
+ * sync contexts (e.g. Vite plugin transforms). Use {@link getLastUpdatedAsync}
+ * in async pipelines to avoid blocking the event loop.
+ */
+export function getLastUpdated(filePath: string): number {
+  const result = execFileSync('git', ['log', '-1', '--format=%ct', '--', filePath], { encoding: 'utf-8' })
+  return Number.parseInt(result.trim(), 10) * 1000
+}
+
+/**
+ * Async variant of {@link getLastUpdated}, using simple-git to avoid
+ * blocking the event loop. Prefer this in async build pipelines.
+ */
+export async function getLastUpdatedAsync(filePath: string): Promise<number> {
+  const result = await git.raw(['log', '-1', '--format=%ct', '--', filePath])
+  return Number.parseInt(result.trim(), 10) * 1000
 }

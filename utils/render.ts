@@ -11,16 +11,52 @@ const RE_LINK = /\[(.*?)\]\((.*?)\)/g
 const RE_CODE = /`(.*?)`/g
 const RE_NEWLINE = /\n$/gm
 
+/**
+ * Protocols allowed in markdown links and images.
+ * Blocks `javascript:`, `data:`, `vbscript:`, protocol-relative `//` URLs, etc.
+ */
+const SAFE_URL_RE = /^(?:https?:\/\/|\/(?!\/)|#|mailto:)/i
+
+/**
+ * Escape HTML special characters to prevent XSS attacks.
+ * Only escapes characters that can open HTML tags or attributes.
+ * `>` is intentionally preserved so that markdown blockquote syntax still works.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Sanitize a URL: only allow safe protocols.
+ * Returns empty string for dangerous URLs like `javascript:`, `data:`, etc.
+ */
+function sanitizeUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed)
+    return ''
+  return SAFE_URL_RE.test(trimmed) ? trimmed : ''
+}
+
 export function renderMarkdown(markdownText = '') {
-  const htmlText = markdownText
+  const htmlText = escapeHtml(markdownText)
     .replace(RE_H3, '<h3>$1</h3>')
     .replace(RE_H2, '<h2>$1</h2>')
     .replace(RE_H1, '<h1>$1</h1>')
     .replace(RE_BLOCKQUOTE, '<blockquote>$1</blockquote>')
     .replace(RE_BOLD, '<b>$1</b>')
     .replace(RE_ITALIC, '<i>$1</i>')
-    .replace(RE_IMG, '<img alt=\'$1\' src=\'$2\' />')
-    .replace(RE_LINK, '<a href=\'$2\'>$1</a>')
+    .replace(RE_IMG, (_, alt, src) => {
+      const safeSrc = sanitizeUrl(src)
+      return safeSrc ? `<img alt='${alt}' src='${safeSrc}' />` : alt
+    })
+    .replace(RE_LINK, (_, text, href) => {
+      const safeHref = sanitizeUrl(href)
+      return safeHref ? `<a href='${safeHref}'>${text}</a>` : text
+    })
     .replace(RE_CODE, '<code>$1</code>')
     .replace(RE_NEWLINE, '<br />')
 
@@ -29,9 +65,29 @@ export function renderMarkdown(markdownText = '') {
 
 const RE_ISSUE = /#(\d+)/g
 
+/**
+ * Replace #issue references in HTML text nodes only.
+ *
+ * Tokenizes the HTML into three kinds of segments:
+ *   1. `<a ...>...</a>` — preserved verbatim (avoids nested anchors)
+ *   2. any other tag (e.g. `<img alt='#1'/>`, `<code>`) — preserved verbatim
+ *      so attributes like `alt` / `src` / `href` are never rewritten
+ *   3. text outside tags — `#123` becomes `<a href='.../issues/123'>#123</a>`
+ */
+function replaceIssueRefs(html: string, repo: string): string {
+  return html.replace(
+    /(<a\s[^>]*>[\s\S]*?<\/a>)|(<[^>]+>)|([^<]+)/gi,
+    (match, _anchor, _tag, text) => {
+      if (text == null)
+        return match // anchor block or single tag — leave untouched
+      return text.replace(RE_ISSUE, `<a href='${repo}/issues/$1'>#$1</a>`)
+    },
+  )
+}
+
 export function renderCommitMessage(msg: string, repo: string) {
   const html = renderMarkdown(msg)
   if (!repo)
     return html
-  return html.replace(RE_ISSUE, `<a href=\'${repo}/issues/$1\'>#$1</a>`)
+  return replaceIssueRefs(html, repo)
 }
