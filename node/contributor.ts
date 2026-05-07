@@ -1,4 +1,5 @@
 import type { Contributor, GitLogOptions } from '../types'
+import { execFileSync } from 'node:child_process'
 import consola from 'consola'
 import gravatar from 'gravatar'
 import md5 from 'md5'
@@ -153,10 +154,21 @@ export async function getContributors(filePath?: string, options?: GitLogOptions
 }
 
 /**
- * Get the last updated timestamp of a file from git history.
- * Uses async git command to avoid blocking the event loop.
+ * Get the last updated timestamp of a file from git history (synchronous).
+ * Kept synchronous for backward compatibility — consumers may call this in
+ * sync contexts (e.g. Vite plugin transforms). Use {@link getLastUpdatedAsync}
+ * in async pipelines to avoid blocking the event loop.
  */
-export async function getLastUpdated(filePath: string): Promise<number> {
+export function getLastUpdated(filePath: string): number {
+  const result = execFileSync('git', ['log', '-1', '--format=%ct', '--', filePath], { encoding: 'utf-8' })
+  return Number.parseInt(result.trim(), 10) * 1000
+}
+
+/**
+ * Async variant of {@link getLastUpdated}, using simple-git to avoid
+ * blocking the event loop. Prefer this in async build pipelines.
+ */
+export async function getLastUpdatedAsync(filePath: string): Promise<number> {
   const result = await git.raw(['log', '-1', '--format=%ct', '--', filePath])
   return Number.parseInt(result.trim(), 10) * 1000
 }
