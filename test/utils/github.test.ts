@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import { guessGitHubUsername, parseGithubUrl, resolveGitHubUsers } from '../../utils/github'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getGitHubToken, guessGitHubUsername, parseGithubUrl, resolveGitHubUsers } from '../../utils/github'
 
 describe('parseGithubUrl', () => {
   it('should parse HTTPS GitHub URL', () => {
@@ -51,11 +51,97 @@ describe('guessGitHubUsername', () => {
   })
 })
 
+describe('getGitHubToken', () => {
+  const original = { GITHUB_TOKEN: process.env.GITHUB_TOKEN, GH_TOKEN: process.env.GH_TOKEN }
+
+  afterEach(() => {
+    process.env.GITHUB_TOKEN = original.GITHUB_TOKEN
+    process.env.GH_TOKEN = original.GH_TOKEN
+  })
+
+  it('should prefer GITHUB_TOKEN', () => {
+    process.env.GITHUB_TOKEN = 'gh_token'
+    process.env.GH_TOKEN = 'cli_token'
+    expect(getGitHubToken()).toBe('gh_token')
+  })
+
+  it('should fall back to GH_TOKEN', () => {
+    delete process.env.GITHUB_TOKEN
+    process.env.GH_TOKEN = 'cli_token'
+    expect(getGitHubToken()).toBe('cli_token')
+  })
+
+  it('should return undefined when no token is set', () => {
+    delete process.env.GITHUB_TOKEN
+    delete process.env.GH_TOKEN
+    expect(getGitHubToken()).toBeUndefined()
+  })
+})
+
 describe('resolveGitHubUsers', () => {
+  const original = { GITHUB_TOKEN: process.env.GITHUB_TOKEN, GH_TOKEN: process.env.GH_TOKEN }
+
+  beforeEach(() => {
+    delete process.env.GITHUB_TOKEN
+    delete process.env.GH_TOKEN
+  })
+
+  afterEach(() => {
+    process.env.GITHUB_TOKEN = original.GITHUB_TOKEN
+    process.env.GH_TOKEN = original.GH_TOKEN
+  })
+
   it('should return empty map for empty emails', async () => {
     const result = await resolveGitHubUsers('owner', 'repo', [])
     expect(result).toBeInstanceOf(Map)
     expect(result.size).toBe(0)
+  })
+
+  it('should authenticate Octokit when a token is present', async () => {
+    process.env.GITHUB_TOKEN = 'secret_token'
+    const octokitSpy = vi.fn()
+
+    vi.doMock('@octokit/rest', () => ({
+      Octokit: class {
+        constructor(opts?: unknown) {
+          octokitSpy(opts)
+        }
+
+        repos = {
+          listCommits: vi.fn().mockResolvedValue({ data: [] }),
+        }
+      },
+    }))
+
+    const { resolveGitHubUsers: resolve } = await import('../../utils/github')
+    await resolve('owner', 'repo', ['user@example.com'])
+
+    expect(octokitSpy).toHaveBeenCalledWith({ auth: 'secret_token' })
+
+    vi.doUnmock('@octokit/rest')
+  })
+
+  it('should construct Octokit without auth when no token is present', async () => {
+    const octokitSpy = vi.fn()
+
+    vi.doMock('@octokit/rest', () => ({
+      Octokit: class {
+        constructor(opts?: unknown) {
+          octokitSpy(opts)
+        }
+
+        repos = {
+          listCommits: vi.fn().mockResolvedValue({ data: [] }),
+        }
+      },
+    }))
+
+    const { resolveGitHubUsers: resolve } = await import('../../utils/github')
+    await resolve('owner', 'repo', ['user@example.com'])
+
+    expect(octokitSpy).toHaveBeenCalledWith({})
+
+    vi.doUnmock('@octokit/rest')
   })
 
   it('should resolve emails from recent commits', async () => {

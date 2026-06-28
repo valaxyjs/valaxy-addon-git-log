@@ -24,6 +24,25 @@ function getFrontmatter(route: EditableTreeNode): FrontmatterWithGitLog {
   return route.meta.frontmatter as FrontmatterWithGitLog
 }
 
+/**
+ * Reconstruct an `email -> login` map from a previously written `git-log.json`.
+ * Lets a committed cache seed GitHub resolution so already-known emails skip
+ * the API entirely (only brand-new emails are queried).
+ */
+function buildKnownLoginsFromCache(prebuiltData: GitLogFileEntry): Map<string, string> {
+  const knownLogins = new Map<string, string>()
+  for (const entry of Object.values(prebuiltData)) {
+    for (const contributor of entry.contributors || []) {
+      if (!contributor.email || !contributor.github || knownLogins.has(contributor.email))
+        continue
+      const login = contributor.github.split('/').pop()
+      if (login)
+        knownLogins.set(contributor.email, login)
+    }
+  }
+  return knownLogins
+}
+
 export const destDir = path.resolve(process.cwd(), './public')
 // Only allow files from the user's working directory 'pages' folder
 export const currentWorkingDirectory = path.join(process.cwd(), 'pages')
@@ -287,17 +306,12 @@ export async function flushGitLogBatch(options: GitLogOptions) {
     batchGetChangelog(resolvedBase, filePaths, maxCount, options),
   ])
 
-  // Resolve GitHub usernames for contributors without noreply emails
-  if (options.repositoryUrl && options.contributor?.resolveGitHub !== false) {
-    const allContributors = [...new Set([...contributorsMap.values()].flat())]
-    await resolveContributorsGitHub(allContributors, options.repositoryUrl)
-  }
-
-  // Write results for prebuilt strategy (single file write)
+  // Load the existing prebuilt cache up-front so we can both reuse previously
+  // resolved GitHub logins (below) and merge per-file entries (later).
+  const gitLogPath = isPrebuilt && destDir ? path.join(destDir, 'git-log.json') : undefined
   let prebuiltData: GitLogFileEntry = {}
 
-  if (isPrebuilt && destDir) {
-    const gitLogPath = path.join(destDir, 'git-log.json')
+  if (gitLogPath) {
     try {
       if (await fs.pathExists(gitLogPath))
         prebuiltData = JSON.parse(await fs.readFile(gitLogPath, 'utf-8'))
@@ -305,6 +319,15 @@ export async function flushGitLogBatch(options: GitLogOptions) {
     catch (error) {
       consola.error('valaxy-addon-git-log: Error reading existing git log file:', error)
     }
+  }
+
+  // Resolve GitHub usernames for contributors without noreply emails.
+  // Reuse logins already cached in git-log.json so a committed cache lets the
+  // build run with zero (or minimal) GitHub API calls.
+  if (options.repositoryUrl && options.contributor?.resolveGitHub !== false) {
+    const knownLogins = buildKnownLoginsFromCache(prebuiltData)
+    const allContributors = [...new Set([...contributorsMap.values()].flat())]
+    await resolveContributorsGitHub(allContributors, options.repositoryUrl, knownLogins)
   }
 
   for (const { route, filePath, gitRelativePath } of routes) {
@@ -326,8 +349,7 @@ export async function flushGitLogBatch(options: GitLogOptions) {
     }
   }
 
-  if (isPrebuilt && destDir) {
-    const gitLogPath = path.join(destDir, 'git-log.json')
+  if (gitLogPath) {
     try {
       await fs.mkdir(path.dirname(gitLogPath), { recursive: true })
       await fs.writeFile(gitLogPath, JSON.stringify(prebuiltData, null, 2), 'utf-8')

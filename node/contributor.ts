@@ -26,8 +26,37 @@ export function createContributor(name: string, email: string): Contributor {
 }
 
 /**
+ * Apply a previously-resolved `email -> login` map onto contributors that
+ * don't have a GitHub link yet. Mutates the items in-place.
+ *
+ * Used to reuse logins persisted in `git-log.json` from earlier builds so we
+ * only hit the GitHub API for emails we have never resolved before.
+ */
+export function applyKnownLogins(
+  contributors: Contributor[],
+  knownLogins?: Map<string, string>,
+): void {
+  if (!knownLogins?.size)
+    return
+
+  for (const contributor of contributors) {
+    if (contributor.github)
+      continue
+    const login = knownLogins.get(contributor.email)
+    if (login) {
+      contributor.github = `https://github.com/${login}`
+      contributor.avatar = `https://github.com/${login}.png`
+    }
+  }
+}
+
+/**
  * Resolve GitHub usernames for contributors that don't have one yet.
  * Uses the GitHub API to look up emails from the repository's commit history.
+ *
+ * Pass `knownLogins` (an `email -> login` map, typically reconstructed from a
+ * committed `git-log.json`) to skip emails already resolved by a prior build,
+ * minimizing — and often eliminating — GitHub API calls.
  *
  * **Note:** This function mutates the `contributors` array items in-place,
  * updating their `github` and `avatar` fields when a match is found.
@@ -35,9 +64,13 @@ export function createContributor(name: string, email: string): Contributor {
 export async function resolveContributorsGitHub(
   contributors: Contributor[],
   repositoryUrl?: string,
+  knownLogins?: Map<string, string>,
 ): Promise<Contributor[]> {
   if (!repositoryUrl)
     return contributors
+
+  // Seed from cache first so resolved emails are excluded from the API lookup.
+  applyKnownLogins(contributors, knownLogins)
 
   const unresolved = contributors.filter(c => !c.github)
   if (!unresolved.length)

@@ -1,6 +1,20 @@
+import process from 'node:process'
+
 // eslint-disable-next-line regexp/no-super-linear-backtracking
 const RE_GITHUB_URL = /github\.com[/:](.+?)\/(.+?)(\.git)?$/
 const RE_GITHUB_NOREPLY = /^(\d+\+)?([^@]+)@users\.noreply\.github\.com$/
+
+/**
+ * Read a GitHub token from the environment.
+ *
+ * Honors `GITHUB_TOKEN` (injected automatically into every GitHub Actions
+ * workflow) and `GH_TOKEN` (the GitHub CLI convention). When present, API
+ * requests are authenticated, lifting the rate limit from 60/hour (anonymous)
+ * to 5000/hour — the standard way to avoid limits during docs builds.
+ */
+export function getGitHubToken(): string | undefined {
+  return process.env.GITHUB_TOKEN || process.env.GH_TOKEN || undefined
+}
 
 export function parseGithubUrl(url: string) {
   const match = url.match(RE_GITHUB_URL)
@@ -21,10 +35,13 @@ export function guessGitHubUsername(email: string): string | null {
 
 /**
  * Maximum number of GitHub API requests per `resolveGitHubUsers` invocation.
- * Unauthenticated requests are limited to 60/hour, so we cap total calls
- * to avoid exhausting the quota during a single build.
+ *
+ * Unauthenticated requests are limited to 60/hour, so we keep the anonymous
+ * cap low to avoid exhausting the quota during a single build. When a token
+ * is present the limit jumps to 5000/hour, so we allow a much higher cap.
  */
-const MAX_API_REQUESTS = 15
+const MAX_API_REQUESTS_ANON = 15
+const MAX_API_REQUESTS_AUTH = 60
 
 /**
  * Resolve GitHub usernames for a list of emails by querying the
@@ -34,8 +51,10 @@ const MAX_API_REQUESTS = 15
  * (e.g. `me@yunyoujun.cn`) to the correct GitHub login by
  * checking the `author.login` field from the commits endpoint.
  *
- * Uses unauthenticated requests (60 req/hour) with a per-call cap
- * of {@link MAX_API_REQUESTS} requests to avoid quota exhaustion.
+ * Authenticates with a token from {@link getGitHubToken} when available
+ * (5000 req/hour), falling back to unauthenticated requests (60 req/hour).
+ * A per-call cap avoids quota exhaustion: {@link MAX_API_REQUESTS_ANON} when
+ * anonymous, {@link MAX_API_REQUESTS_AUTH} when authenticated.
  */
 export async function resolveGitHubUsers(
   owner: string,
@@ -50,9 +69,12 @@ export async function resolveGitHubUsers(
   const uniqueEmails = [...new Set(emails)]
   let requestCount = 0
 
+  const token = getGitHubToken()
+  const MAX_API_REQUESTS = token ? MAX_API_REQUESTS_AUTH : MAX_API_REQUESTS_ANON
+
   try {
     const { Octokit } = await import('@octokit/rest')
-    const octokit = new Octokit()
+    const octokit = new Octokit(token ? { auth: token } : {})
 
     // --- Phase 1: fetch recent commits (up to 100) to build email -> login map ---
     const { data: commits } = await octokit.repos.listCommits({
