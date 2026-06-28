@@ -192,6 +192,79 @@ describe('gitLog batch parsing', () => {
   })
 })
 
+describe('github login cache', () => {
+  beforeEach(() => {
+    vi.resetModules()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('serializeLoginCache sorts keys and ends with a newline', async () => {
+    const { serializeLoginCache } = await import('../../node/gitLog')
+    const out = serializeLoginCache({ 'b@example.com': 'bob', 'a@example.com': 'alice' })
+    expect(out).toBe('{\n  "a@example.com": "alice",\n  "b@example.com": "bob"\n}\n')
+  })
+
+  it('seeds resolution from the cache and writes it back', async () => {
+    const { git } = await import('../../node/index')
+    const rawMock = vi.mocked(git.raw)
+    const fs = (await import('fs-extra')).default
+
+    const cwd = process.cwd()
+    const pagesPath = path.join(cwd, 'pages', 'index.md')
+
+    // alice@example.com is a non-noreply email → github null until resolved.
+    const contributorOutput = [
+      `---COMMIT_SEP---Alice${FIELD_SEP}alice@example.com`,
+      'pages/index.md',
+    ].join('\n')
+
+    rawMock
+      .mockResolvedValueOnce(contributorOutput) // batchGetContributors
+      .mockResolvedValueOnce('') // batchGetChangelog
+
+    // The committed cache already knows alice → no GitHub API call is needed
+    // (the unmocked @octokit/rest is never imported because nothing is unresolved).
+    vi.mocked(fs.pathExists).mockResolvedValueOnce(true as any)
+    vi.mocked(fs.readFile).mockResolvedValueOnce('{"alice@example.com":"alice"}' as any)
+    vi.mocked(fs.writeFile).mockClear()
+
+    const gitLogModule = await import('../../node/gitLog')
+    gitLogModule.setBasePath(cwd)
+
+    const mockRoute = {
+      components: new Map([['default', pagesPath]]),
+      meta: { frontmatter: {} },
+    }
+
+    const options = {
+      repositoryUrl: 'https://github.com/owner/repo',
+      contributor: {
+        strategy: 'build-time' as const,
+        githubCache: '.valaxy/git-log-contributors.json',
+      },
+    }
+    await gitLogModule.handleGitLogInfo(options, mockRoute as any)
+    await gitLogModule.flushGitLogBatch(options)
+
+    // Seeded from cache: alice resolved to a GitHub profile without the API.
+    const fm = mockRoute.meta.frontmatter as any
+    expect(fm.git_log.contributors[0]).toMatchObject({
+      email: 'alice@example.com',
+      github: 'https://github.com/alice',
+    })
+
+    // Cache written back to the configured path with stable serialization.
+    const cacheWrite = vi.mocked(fs.writeFile).mock.calls.find(
+      ([p]) => String(p).endsWith(path.join('.valaxy', 'git-log-contributors.json')),
+    )
+    expect(cacheWrite).toBeTruthy()
+    expect(cacheWrite![1]).toBe('{\n  "alice@example.com": "alice"\n}\n')
+  })
+})
+
 describe('path utilities', () => {
   it('destDir should resolve to public directory', async () => {
     const { destDir } = await import('../../node/gitLog')

@@ -24,6 +24,11 @@ function getFrontmatter(route: EditableTreeNode): FrontmatterWithGitLog {
   return route.meta.frontmatter as FrontmatterWithGitLog
 }
 
+/** Extract the login from a `https://github.com/<login>` URL. */
+function extractLoginFromGithubUrl(url: string): string | undefined {
+  return url.split('/').pop() || undefined
+}
+
 /**
  * Reconstruct an `email -> login` map from a previously written `git-log.json`.
  * Lets a committed cache seed GitHub resolution so already-known emails skip
@@ -35,12 +40,68 @@ function buildKnownLoginsFromCache(prebuiltData: GitLogFileEntry): Map<string, s
     for (const contributor of entry.contributors || []) {
       if (!contributor.email || !contributor.github || knownLogins.has(contributor.email))
         continue
-      const login = contributor.github.split('/').pop()
+      const login = extractLoginFromGithubUrl(contributor.github)
       if (login)
         knownLogins.set(contributor.email, login)
     }
   }
   return knownLogins
+}
+
+/**
+ * Serialize an `email -> login` map to stable JSON (keys sorted, trailing
+ * newline) so the committed cache produces minimal, conflict-free diffs.
+ */
+export function serializeLoginCache(logins: Record<string, string>): string {
+  const sorted: Record<string, string> = {}
+  for (const email of Object.keys(logins).sort())
+    sorted[email] = logins[email]
+  return `${JSON.stringify(sorted, null, 2)}\n`
+}
+
+/**
+ * Read the committed `email -> login` cache. Missing or malformed files
+ * degrade gracefully to an empty map.
+ */
+async function readLoginCache(filePath: string): Promise<Record<string, string>> {
+  try {
+    if (await fs.pathExists(filePath))
+      return JSON.parse(await fs.readFile(filePath, 'utf-8'))
+  }
+  catch (error) {
+    consola.error('valaxy-addon-git-log: Error reading GitHub login cache:', error)
+  }
+  return {}
+}
+
+/**
+ * Merge freshly resolved logins into the existing cache and write it back.
+ * Skips writing when there is nothing to persist.
+ */
+async function writeLoginCache(
+  filePath: string,
+  existing: Record<string, string>,
+  contributors: Contributor[],
+): Promise<void> {
+  const merged: Record<string, string> = { ...existing }
+  for (const contributor of contributors) {
+    if (!contributor.github)
+      continue
+    const login = extractLoginFromGithubUrl(contributor.github)
+    if (login)
+      merged[contributor.email] = login
+  }
+
+  if (!Object.keys(merged).length)
+    return
+
+  try {
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
+    await fs.writeFile(filePath, serializeLoginCache(merged), 'utf-8')
+  }
+  catch (error) {
+    consola.error('valaxy-addon-git-log: Error writing GitHub login cache at', filePath, error)
+  }
 }
 
 export const destDir = path.resolve(process.cwd(), './public')
@@ -322,12 +383,26 @@ export async function flushGitLogBatch(options: GitLogOptions) {
   }
 
   // Resolve GitHub usernames for contributors without noreply emails.
-  // Reuse logins already cached in git-log.json so a committed cache lets the
-  // build run with zero (or minimal) GitHub API calls.
+  // Seed from both the dedicated login cache and any prior git-log.json so a
+  // committed cache lets the build run with zero (or minimal) GitHub API calls.
   if (options.repositoryUrl && options.contributor?.resolveGitHub !== false) {
+    const githubCachePath = options.contributor?.githubCache
+      ? path.resolve(process.cwd(), options.contributor.githubCache)
+      : undefined
+    const cachedLogins = githubCachePath ? await readLoginCache(githubCachePath) : {}
+
     const knownLogins = buildKnownLoginsFromCache(prebuiltData)
+    for (const [email, login] of Object.entries(cachedLogins)) {
+      if (!knownLogins.has(email))
+        knownLogins.set(email, login)
+    }
+
     const allContributors = [...new Set([...contributorsMap.values()].flat())]
     await resolveContributorsGitHub(allContributors, options.repositoryUrl, knownLogins)
+
+    // Persist resolved logins back to the small, committable cache.
+    if (githubCachePath)
+      await writeLoginCache(githubCachePath, cachedLogins, allContributors)
   }
 
   for (const { route, filePath, gitRelativePath } of routes) {

@@ -90,17 +90,25 @@ export default defineValaxyConfig<ThemeConfig>({
 | contributor.strategy          | `'prebuilt'` \| `'build-time'` \| `'runtime'` | `'prebuilt'`  | Data fetching strategy                                                       |
 | contributor.logArgs           | `string`                                      | `''`          | Extra `git log` arguments (for `'prebuilt'` and `'build-time'`)              |
 | contributor.resolveGitHub     | `boolean`                                     | `true`        | Look up GitHub usernames for non-noreply emails (requires `repositoryUrl`)   |
+| contributor.githubCache       | `string`                                      | `undefined`   | Path to a small, committable `email -> login` cache (see tip below)          |
 
 > [!TIP]
-> **Avoiding GitHub API rate limits.** GitHub username resolution (`resolveGitHub`) uses the GitHub API, which is limited to **60 requests/hour** for anonymous requests — easy to exhaust on a shared CI IP, surfacing as `403` / `Failed to resolve GitHub usernames`.
+> **Avoiding GitHub API rate limits.** GitHub username resolution (`resolveGitHub`) uses the GitHub API, which is limited to **60 requests/hour** for anonymous requests — easy to exhaust on a shared CI IP, surfacing as `403` / `Failed to resolve GitHub usernames`. Pick whichever fits your deployment:
 >
+> - **Commit a `githubCache` file (recommended, zero-config).** Point `contributor.githubCache` at a small JSON file and commit it:
+>   ```ts
+>   addonGitLog({
+>     repositoryUrl: 'https://github.com/you/repo.git',
+>     contributor: { githubCache: '.valaxy/git-log-contributors.json' },
+>   })
+>   ```
+>   It stores only `email -> login` pairs, so it stays tiny and stable (unlike the large, churning `git-log.json` build artifact). On the next build, cached logins seed resolution — already-known emails skip the API, yielding **near-zero calls even without a token**. Delete the file to force a refresh.
 > - **Set `GITHUB_TOKEN` (or `GH_TOKEN`).** When present, requests are authenticated, raising the limit to **5000/hour**. GitHub Actions injects `GITHUB_TOKEN` into every workflow automatically — just expose it to the build step:
 >   ```yaml
 >   - run: pnpm build # or your docs build command
 >     env:
 >       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 >   ```
-> - **Commit `public/git-log.json` (`prebuilt` strategy).** Resolved logins are reused from the committed cache, so subsequent builds only query the API for brand-new contributor emails — often zero calls. Regenerate it locally whenever contributors change.
 > - **Or set `resolveGitHub: false`** to skip the API entirely. GitHub *noreply* emails are still resolved locally (no API); only non-noreply emails fall back to Gravatar/initials.
 | changelog.includeTypes        | `string[]`                                    | `['feat', 'fix']` | Conventional-commit types included in the changelog                      |
 | changelog.includeBreaking     | `boolean`                                     | `true`        | Whether to include `type!:` / `type(scope)!:` breaking commits               |

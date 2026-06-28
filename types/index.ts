@@ -29,6 +29,23 @@ export interface GitLogOptions {
      * @default true
      */
     resolveGitHub?: boolean
+    /**
+     * Path (relative to the project root) to a small JSON file caching resolved
+     * `email -> GitHub login` pairs.
+     *
+     * Unlike the full `git-log.json` build artifact, this file stays small and
+     * stable (logins rarely change), so it is meant to be **committed**. On the
+     * next build, cached logins seed GitHub resolution: already-known emails
+     * skip the API entirely, so a committed cache yields near-zero API calls
+     * even without a token. Newly resolved logins are written back after each
+     * build.
+     *
+     * Only used when `resolveGitHub` is not `false`.
+     *
+     * @default undefined (disabled)
+     * @example '.valaxy/git-log-contributors.json'
+     */
+    githubCache?: string
   }
   changelog?: {
     /**
