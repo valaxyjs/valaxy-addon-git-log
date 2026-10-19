@@ -7,7 +7,7 @@ vi.mock('simple-git', () => {
     raw: vi.fn(),
     revparse: vi.fn(),
   }
-  return { default: () => mockGit }
+  return { simpleGit: () => mockGit }
 })
 
 // Mock fs-extra

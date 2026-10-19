@@ -1,12 +1,12 @@
 import type { GitLogOptions } from '../types'
 import consola from 'consola'
 import defu from 'defu'
-import Git from 'simple-git'
+import { simpleGit } from 'simple-git'
 import { defineValaxyAddon } from 'valaxy'
 import pkg from '../package.json'
 import { flushGitLogBatch, handleGitLogInfo, initBasePath } from './gitLog'
 
-export const git = Git({
+export const git = simpleGit({
   maxConcurrentProcesses: 10,
 })
 
